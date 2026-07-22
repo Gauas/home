@@ -30,7 +30,7 @@ const i18n = {
 
 async function measureLayout(page) {
   return page.evaluate(() => {
-    const selectors = [".hero", ".proof-strip", ".services", ".work", ".process", ".process__layout", ".process__intro", ".process__steps", ".contact-card", ".site-footer"];
+    const selectors = [".hero", ".proof-strip", ".services", ".service-carousel", ".work", ".process", ".process__layout", ".process__intro", ".process__journey", ".process__steps", ".contact-card", ".site-footer"];
     return Object.fromEntries(selectors.map((selector) => {
       const rect = document.querySelector(selector)?.getBoundingClientRect();
       return [selector, rect ? { top: Math.round(rect.top + window.scrollY), height: Math.round(rect.height) } : null];
@@ -50,6 +50,39 @@ for (const width of widths) {
     scrollWidth: document.documentElement.scrollWidth,
     lazyLoadedAtTop: [...document.querySelectorAll('.project-card img')].filter((img) => img.complete && img.naturalWidth > 0).length,
   }));
+  await page.evaluate(() => document.querySelector(".service-carousel")?.scrollIntoView({ block: "center", behavior: "instant" }));
+  await page.waitForFunction(() => document.querySelector(".services")?.classList.contains("is-visible"));
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const carouselBefore = await page.evaluate(() => ({
+    active: document.querySelector('.service-carousel__slide[aria-hidden="false"] .service-card.is-active h3')?.textContent.trim(),
+    visibleCards: document.querySelectorAll('.service-carousel__slide[aria-hidden="false"]').length,
+    portraitCards: [...document.querySelectorAll('.service-carousel__slide[aria-hidden="false"] .service-card')].every((card) => {
+      const rect = card.getBoundingClientRect();
+      return rect.height > rect.width;
+    }),
+    pageOverflows: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  }));
+  if (width === 375) await page.screenshot({ path: "verification-mobile-services.png", fullPage: false });
+  if (width === 1536) await page.screenshot({ path: "verification-desktop-services.png", fullPage: false });
+  let carouselAuto;
+  if (width === 1536) {
+    const carouselCenter = await page.evaluate(() => {
+      const rect = document.querySelector(".service-carousel").getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    });
+    await page.mouse.move(carouselCenter.x, carouselCenter.y);
+    const pausedBefore = await page.evaluate(() => document.querySelector('.service-card.is-active h3')?.textContent.trim());
+    await new Promise((resolve) => setTimeout(resolve, 3400));
+    const pausedAfter = await page.evaluate(() => document.querySelector('.service-card.is-active h3')?.textContent.trim());
+    await page.mouse.move(0, 0);
+    await new Promise((resolve) => setTimeout(resolve, 3400));
+    const resumedActive = await page.evaluate(() => document.querySelector('.service-card.is-active h3')?.textContent.trim());
+    carouselAuto = {
+      active: resumedActive,
+      pausesOnHover: pausedBefore === pausedAfter,
+      resumesAfterHover: resumedActive !== pausedAfter,
+    };
+  }
   const layoutVi = await measureLayout(page);
 
   await page.evaluate(() => window.localStorage.setItem("gauas-language", "en"));
@@ -91,6 +124,31 @@ for (const width of widths) {
     headerHeight: Math.round(document.querySelector(".site-nav").getBoundingClientRect().height),
     processTop: Math.round(document.querySelector("#process").getBoundingClientRect().top),
   }));
+  await page.waitForFunction(() => document.querySelector(".process__layout")?.classList.contains("is-visible"));
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  const processLayout = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll(".process__steps li")].map((card) => {
+      const rect = card.getBoundingClientRect();
+      return { width: Math.round(rect.width), height: Math.round(rect.height), left: Math.round(rect.left), top: Math.round(rect.top), opacity: getComputedStyle(card).opacity };
+    });
+    const icons = [...document.querySelectorAll(".process__icon")].map((icon) => {
+      const rect = icon.getBoundingClientRect();
+      return { centerX: Math.round(rect.left + rect.width / 2), centerY: Math.round(rect.top + rect.height / 2), size: Math.round(rect.width) };
+    });
+    const rail = document.querySelector(".process__rail")?.getBoundingClientRect();
+    const title = document.querySelector(".process__intro h2");
+    const delays = [...document.querySelectorAll(".process__steps li")].map((card) => parseFloat(getComputedStyle(card).transitionDelay) * 1000);
+    return {
+      cards,
+      icons,
+      rail: rail ? { left: Math.round(rail.left), right: Math.round(rail.right), bottom: Math.round(rail.bottom) } : null,
+      alignedIcons: icons.every((icon) => Math.abs(icon.centerY - icons[0].centerY) <= 1),
+      iconsOnRail: rail ? icons.every((icon) => Math.abs(icon.centerY - rail.bottom) <= 2) : false,
+      revealed: cards.every((card) => card.opacity === "1"),
+      titleVisible: title ? getComputedStyle(title.closest(".process__intro")).opacity === "1" : false,
+      leftToRightDelays: delays.every((delay, index) => index === 0 || delay > delays[index - 1]),
+    };
+  });
 
   if (width === 375) {
     await page.screenshot({ path: "verification-mobile-process.png", fullPage: false });
@@ -99,6 +157,7 @@ for (const width of widths) {
   }
 
   if (width === 1536) {
+    await page.screenshot({ path: "verification-desktop-process.png", fullPage: false });
     await page.evaluate(() => document.querySelector(".proof-strip")?.scrollIntoView({ block: "start", behavior: "instant" }));
     await page.screenshot({ path: "verification-desktop-sectors.png", fullPage: false });
   }
@@ -138,7 +197,7 @@ for (const width of widths) {
     await page.screenshot({ path: "verification-desktop-work.png", fullPage: false });
   }
 
-  results.push({ width, ...initial, languageShift, contact, anchor, ...afterScroll });
+  results.push({ width, ...initial, carousel: { before: carouselBefore, auto: carouselAuto }, languageShift, contact, anchor, processLayout, ...afterScroll });
   await page.close();
 }
 

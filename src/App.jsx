@@ -181,6 +181,161 @@ function GauasWordmark() {
   return <span className="wordmark__mark" aria-hidden="true" />;
 }
 
+function getCarouselVisibleCount() {
+  if (typeof window === "undefined") return 1;
+  if (window.matchMedia("(min-width: 60rem)").matches) return 3;
+  if (window.matchMedia("(min-width: 40rem)").matches) return 2;
+  return 1;
+}
+
+function ServiceCarousel({ services, learnMore, language }) {
+  const labels = language === "vi"
+    ? {
+        carousel: "Danh sách dịch vụ",
+      }
+    : {
+        carousel: "Services carousel",
+      };
+  const itemCount = services.length;
+  const [position, setPosition] = useState(() => getCarouselVisibleCount() === 3 ? 3 : 2);
+  const [visibleCount, setVisibleCount] = useState(getCarouselVisibleCount);
+  const [isAnimated, setIsAnimated] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [hoverPaused, setHoverPaused] = useState(false);
+  const [focusPaused, setFocusPaused] = useState(false);
+  const [touchPaused, setTouchPaused] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const interactionPaused = hoverPaused || focusPaused || touchPaused;
+
+  useEffect(() => {
+    const tablet = window.matchMedia("(min-width: 40rem)");
+    const desktop = window.matchMedia("(min-width: 60rem)");
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let frame = 0;
+
+    const updateViewport = () => {
+      setIsAnimated(false);
+      setVisibleCount(desktop.matches ? 3 : tablet.matches ? 2 : 1);
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setIsAnimated(true));
+    };
+    const updateMotion = () => setReducedMotion(motion.matches);
+
+    tablet.addEventListener("change", updateViewport);
+    desktop.addEventListener("change", updateViewport);
+    motion.addEventListener("change", updateMotion);
+    updateMotion();
+
+    return () => {
+      cancelAnimationFrame(frame);
+      tablet.removeEventListener("change", updateViewport);
+      desktop.removeEventListener("change", updateViewport);
+      motion.removeEventListener("change", updateMotion);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (interactionPaused || reducedMotion || isTransitioning) return undefined;
+    const timer = window.setTimeout(() => {
+      setIsAnimated(true);
+      setIsTransitioning(true);
+      setPosition((current) => current + 1);
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [interactionPaused, isTransitioning, position, reducedMotion]);
+
+  const activeIndex = ((position - 2) % itemCount + itemCount) % itemCount;
+  const leadingCards = visibleCount === 3 ? 1 : 0;
+  const firstVisibleTrackIndex = position - leadingCards;
+  const shift = -((position - leadingCards) * 100) / visibleCount;
+  const trackItems = [
+    { ...services[itemCount - 2], originIndex: itemCount - 2, key: "before-2" },
+    { ...services[itemCount - 1], originIndex: itemCount - 1, key: "before-1" },
+    ...services.map((service, originIndex) => ({ ...service, originIndex, key: `service-${originIndex}` })),
+    { ...services[0], originIndex: 0, key: "after-1" },
+    { ...services[1], originIndex: 1, key: "after-2" },
+  ];
+
+  const handleTransitionEnd = (event) => {
+    if (event.target !== event.currentTarget || event.propertyName !== "transform") return;
+    let resetPosition = null;
+    if (position === 1) resetPosition = itemCount + 1;
+    if (position === itemCount + 2) resetPosition = 2;
+
+    if (resetPosition !== null) {
+      setIsAnimated(false);
+      setPosition(resetPosition);
+      requestAnimationFrame(() => requestAnimationFrame(() => setIsAnimated(true)));
+    }
+    setIsTransitioning(false);
+  };
+
+  const handleBlur = (event) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) setFocusPaused(false);
+  };
+
+  return (
+    <div
+      className="service-carousel"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label={labels.carousel}
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") setHoverPaused(true);
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType === "mouse") setHoverPaused(false);
+      }}
+      onTouchStart={() => setTouchPaused(true)}
+      onTouchEnd={() => setTouchPaused(false)}
+      onTouchCancel={() => setTouchPaused(false)}
+      onFocusCapture={() => setFocusPaused(true)}
+      onBlurCapture={handleBlur}
+    >
+      <div className="service-carousel__viewport">
+        <div
+          className="service-carousel__track"
+          data-animated={isAnimated && !reducedMotion}
+          onTransitionEnd={handleTransitionEnd}
+          style={{
+            "--carousel-visible": visibleCount,
+            "--carousel-shift": `${shift}%`,
+          }}
+        >
+          {trackItems.map(({ icon: Icon, number, title, copy: description, originIndex, key }, trackIndex) => {
+            const isVisible = trackIndex >= firstVisibleTrackIndex && trackIndex < firstVisibleTrackIndex + visibleCount;
+            const isActive = originIndex === activeIndex;
+            return (
+              <div
+                className="service-carousel__slide"
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`${originIndex + 1} / ${itemCount}`}
+                aria-hidden={!isVisible}
+                key={key}
+              >
+                <a className={`service-card ${isActive ? "is-active" : ""}`} href="#contact" tabIndex={isVisible ? 0 : -1}>
+                  <span className="service-card__number" aria-hidden="true">{number}</span>
+                  <header className="service-card__head">
+                    <div className="service-card__icon" aria-hidden="true"><Icon size={21} strokeWidth={1.6} /></div>
+                    <h3>{title}</h3>
+                  </header>
+                  <p>{description}</p>
+                  <div className="service-card__action">
+                    <span>{learnMore}</span>
+                    <ArrowRight aria-hidden="true" size={17} strokeWidth={1.7} />
+                  </div>
+                </a>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
@@ -377,27 +532,14 @@ function App() {
         </section>
 
         <div className="light-stage">
-          <section className="services shell" id="services" data-reveal>
-            <header className="section-intro">
-              <h2>{copy.servicesTitle}</h2>
-              <p>{copy.servicesIntro}</p>
-              <ArrowLink href="#contact">{copy.exploreServices}</ArrowLink>
-            </header>
-            <div className="service-grid">
-              {services.map(({ icon: Icon, number, title, copy: description }) => (
-                <a className="service-card" href="#contact" key={title}>
-                  <span className="service-card__number" aria-hidden="true">{number}</span>
-                  <header className="service-card__head">
-                    <div className="service-card__icon" aria-hidden="true"><Icon size={21} strokeWidth={1.6} /></div>
-                    <h3>{title}</h3>
-                  </header>
-                  <p>{description}</p>
-                  <div className="service-card__action">
-                    <span>{copy.learnMore}</span>
-                    <ArrowRight aria-hidden="true" size={17} strokeWidth={1.7} />
-                  </div>
-                </a>
-              ))}
+          <section className="services-stage" id="services">
+            <div className="services shell" data-reveal>
+              <header className="section-intro">
+                <h2>{copy.servicesTitle}</h2>
+                <p>{copy.servicesIntro}</p>
+                <ArrowLink href="#contact">{copy.exploreServices}</ArrowLink>
+              </header>
+              <ServiceCarousel services={services} learnMore={copy.learnMore} language={language} />
             </div>
           </section>
 
@@ -424,24 +566,30 @@ function App() {
         </div>
 
         <section className="process" id="process">
-          <div className="shell process__layout">
-            <header className="process__intro" id="about">
+          <div className="shell process__layout" id="about" data-reveal>
+            <header className="process__intro">
               <h2>{copy.processTitleA} <span>{copy.processTitleB}</span></h2>
             </header>
-            <ol className="process__steps" data-reveal>
-              {process.map(({ icon: Icon, number, title, copy }) => (
-                <li key={number}>
-                  <div className="process__step-head">
-                    <div className="process__icon" aria-hidden="true"><Icon size={20} strokeWidth={1.55} /></div>
-                    <span className="process__number">{number}</span>
-                  </div>
-                  <div className="process__content">
-                    <h3>{title}</h3>
-                    <p>{copy}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <div className="process__journey">
+              <div className="process__canvas">
+                <div className="process__rail" aria-hidden="true" />
+                <ol className="process__steps">
+                  {process.map(({ icon: Icon, number, title, copy }, index) => (
+                    <li style={{ "--step-delay": `${260 + index * 70}ms` }} key={number}>
+                      <div className="process__step-head">
+                        <div className="process__icon" aria-hidden="true"><Icon size={27} strokeWidth={1.45} /></div>
+                      </div>
+                      <span className="process__stem" aria-hidden="true"><i /></span>
+                      <div className="process__content">
+                        <span className="process__number">{number}</span>
+                        <h3>{title}</h3>
+                        <p>{copy}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
           </div>
 
           <aside className="contact-card shell" id="contact" data-reveal>

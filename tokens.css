@@ -12,6 +12,7 @@
   --color-muted: oklch(59% 0.022 264);
   --color-light-ink: oklch(97% 0.008 265);
   --color-light-body: oklch(78% 0.018 265);
+  --color-process-rail: oklch(86% 0.014 265 / 0.82);
   --color-accent: oklch(55% 0.22 271);
   --color-accent-strong: oklch(49% 0.22 271);
   --color-accent-ink: oklch(98% 0.008 265);
