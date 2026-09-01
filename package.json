@@ -6,13 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verify": "node scripts/verify.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
+    "animejs": "^4.5.0",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "three": "^0.185.1",
     "vite": "latest"
   },
   "devDependencies": {
