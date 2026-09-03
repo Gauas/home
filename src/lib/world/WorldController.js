@@ -13,14 +13,56 @@ const TMP_NORMAL = new THREE.Vector3();
 const TMP_QUATERNION = new THREE.Quaternion();
 const TMP_BANK_QUATERNION = new THREE.Quaternion();
 const TMP_OBJECT = new THREE.Object3D();
-const TMP_MATRIX = new THREE.Matrix4();
+const TMP_OFFSET = new THREE.Vector3();
 
 const clamp01 = (value) => THREE.MathUtils.clamp(value, 0, 1);
 const range = (value, from, to) => clamp01((value - from) / Math.max(0.0001, to - from));
 
 function setGroupOpacity(group, opacity) {
-  group.visible = opacity > 0.012;
-  group.userData.activity = opacity;
+  const activity = clamp01(opacity);
+  const easedActivity = activity * activity * (3 - 2 * activity);
+
+  if (!group.userData.fadeMaterials) {
+    const clones = new Map();
+    group.traverse((object) => {
+      if (!object.material || object.userData.noFade) return;
+      const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
+      const fadeMaterials = sourceMaterials.map((source) => {
+        if (!clones.has(source)) {
+          const material = source.clone();
+          const opacityUniform = material.userData?.opacityUniform;
+          material.userData.fadeBaseOpacity = opacityUniform
+            ? material.uniforms[opacityUniform].value
+            : material.opacity;
+          material.userData.fadeBaseTransparent = material.transparent;
+          material.userData.fadeBaseDepthWrite = material.depthWrite;
+          clones.set(source, material);
+        }
+        return clones.get(source);
+      });
+      object.material = Array.isArray(object.material) ? fadeMaterials : fadeMaterials[0];
+    });
+
+    // Hover animations retain material references in userData. Point those at the
+    // destination-local clones as well so one planet can fade independently.
+    group.traverse((object) => {
+      Object.entries(object.userData).forEach(([key, value]) => {
+        if (clones.has(value)) object.userData[key] = clones.get(value);
+      });
+    });
+    group.userData.fadeMaterials = [...clones.values()];
+  }
+
+  group.userData.fadeMaterials.forEach((material) => {
+    const baseOpacity = material.userData.fadeBaseOpacity;
+    const opacityUniform = material.userData.opacityUniform;
+    if (opacityUniform) material.uniforms[opacityUniform].value = baseOpacity * easedActivity;
+    else material.opacity = baseOpacity * easedActivity;
+    material.transparent = material.userData.fadeBaseTransparent || easedActivity < 0.999;
+    material.depthWrite = material.userData.fadeBaseDepthWrite && easedActivity > 0.985;
+  });
+  group.visible = easedActivity > 0.002;
+  group.userData.activity = easedActivity;
 }
 
 function noiseHash(x, y, seed) {
@@ -57,21 +99,84 @@ function fbm(x, y, seed) {
 
 const PLANET_SEEDS = Object.freeze({ earth: 2.1, mars: 7.4, engineering: 12.6, mineral: 19.2 });
 
+// Each destination is still part of the same habitable family, but these terrain
+// profiles keep their silhouettes from reading as four recoloured copies.
+const PLANET_PROFILES = Object.freeze({
+  earth: { scaleX: 4.1, scaleY: 4.4, detailScale: 15.5, wave: 0.052, high: 0.685, coast: 0.635, shelf: 0.585, iceLine: 0.86 },
+  mars: { scaleX: 7.8, scaleY: 6.7, detailScale: 22, wave: 0.026, high: 0.73, coast: 0.675, shelf: 0.62, iceLine: 0.97 },
+  engineering: { scaleX: 4.8, scaleY: 4.5, detailScale: 18, wave: 0.062, high: 0.67, coast: 0.62, shelf: 0.57, iceLine: 0.9 },
+  mineral: { scaleX: 3.45, scaleY: 5.6, detailScale: 13.5, wave: 0.078, high: 0.66, coast: 0.61, shelf: 0.56, iceLine: 0.94 },
+});
+
+const PLANET_PALETTES = Object.freeze({
+  earth: {
+    ice: [225, 238, 240], snow: [197, 216, 204], highland: [80, 105, 59],
+    land: [31, 112, 69], dry: [137, 139, 77], beach: [213, 190, 128],
+    shelf: [32, 139, 166], ocean: [13, 82, 137], deepOcean: [5, 37, 82],
+  },
+  mars: {
+    ice: [236, 239, 224], snow: [222, 224, 199], highland: [91, 128, 64],
+    land: [48, 139, 75], dry: [192, 116, 63], beach: [239, 190, 108],
+    shelf: [41, 174, 175], ocean: [13, 117, 153], deepOcean: [5, 61, 111],
+  },
+  engineering: {
+    ice: [177, 215, 211], snow: [139, 186, 178], highland: [36, 92, 79],
+    land: [21, 78, 70], dry: [70, 98, 77], beach: [111, 142, 112],
+    shelf: [20, 106, 115], ocean: [7, 61, 78], deepOcean: [2, 28, 47],
+  },
+  mineral: {
+    ice: [245, 239, 210], snow: [226, 217, 174], highland: [137, 113, 48],
+    land: [103, 130, 55], dry: [190, 145, 53], beach: [232, 190, 91],
+    shelf: [65, 139, 137], ocean: [25, 92, 116], deepOcean: [10, 51, 81],
+  },
+});
+
 function continentalValue(u, v, kind) {
+  const profile = PLANET_PROFILES[kind];
   const latitude = Math.abs(v - 0.5) * 2;
-  return fbm(u * 4.2, v * 4.2, PLANET_SEEDS[kind]) + Math.sin(u * Math.PI * 6 + v * 4.2) * 0.045 - latitude * 0.025;
+  const broad = fbm(u * profile.scaleX, v * profile.scaleY, PLANET_SEEDS[kind]);
+  const islandDetail = kind === "mars" ? fbm(u * 15.4, v * 12.8, PLANET_SEEDS[kind] + 9.7) : broad;
+  const terrain = kind === "mars" ? broad * 0.72 + islandDetail * 0.28 : broad;
+  return terrain + Math.sin(u * Math.PI * (kind === "mineral" ? 10 : 6) + v * 4.2) * profile.wave - latitude * (kind === "earth" ? 0.03 : 0.018);
 }
 
-function createHabitableDirections(kind, count, phase = 0) {
-  const directions = [];
-  for (let index = 0; index < 1400 && directions.length < count; index += 1) {
-    const y = 1 - 2 * ((index + 0.5) / 1400);
+function createFeatureDirections(kind, count, phase = 0, options = {}) {
+  const profile = PLANET_PROFILES[kind];
+  const focus = (options.focus || new THREE.Vector3(0, 0.18, 1)).clone().normalize();
+  const minTerrain = options.minTerrain ?? profile.coast;
+  const maxTerrain = options.maxTerrain ?? 2;
+  const minFacing = options.minFacing ?? 0.08;
+  const spacing = options.spacing ?? 0.18;
+  const candidates = [];
+
+  for (let index = 0; index < 5200; index += 1) {
+    const y = 1 - 2 * ((index + 0.5) / 5200);
     const angle = index * 2.399963 + phase;
     const radial = Math.sqrt(Math.max(0, 1 - y * y));
     const direction = new THREE.Vector3(Math.cos(angle) * radial, y, Math.sin(angle) * radial);
     const u = ((Math.atan2(direction.z, -direction.x) / (Math.PI * 2)) % 1 + 1) % 1;
     const v = Math.acos(THREE.MathUtils.clamp(direction.y, -1, 1)) / Math.PI;
-    if (continentalValue(u, v, kind) > 0.69) directions.push(direction);
+    const terrain = continentalValue(u, v, kind);
+    const facing = direction.dot(focus);
+    if (terrain < minTerrain || terrain > maxTerrain || facing < minFacing) continue;
+    const scatter = noiseHash(index, Math.floor(phase * 1000), PLANET_SEEDS[kind] + phase) * 0.18;
+    candidates.push({ direction, score: facing + scatter });
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+  const directions = [];
+  const spacingCos = Math.cos(spacing);
+  for (const candidate of candidates) {
+    if (directions.every((direction) => direction.dot(candidate.direction) < spacingCos)) directions.push(candidate.direction);
+    if (directions.length >= count) break;
+  }
+  // Tiny screens use fewer props, but always return the requested number when
+  // terrain permits so a sparse biome does not silently lose its landmarks.
+  if (directions.length < count) {
+    for (const candidate of candidates) {
+      if (!directions.includes(candidate.direction)) directions.push(candidate.direction);
+      if (directions.length >= count) break;
+    }
   }
   return directions;
 }
@@ -88,47 +193,31 @@ function createPlanetTexture(kind, width = 768) {
   const heightContext = heightCanvas.getContext("2d", { alpha: false });
   const heightImage = heightContext.createImageData(canvas.width, canvas.height);
   const seed = PLANET_SEEDS[kind];
+  const palette = PLANET_PALETTES[kind];
+  const profile = PLANET_PROFILES[kind];
 
   for (let y = 0; y < canvas.height; y += 1) {
     const v = y / canvas.height;
     const latitude = Math.abs(v - 0.5) * 2;
     for (let x = 0; x < canvas.width; x += 1) {
       const u = x / canvas.width;
-      const broad = fbm(u * 4.2, v * 4.2, seed);
-      const detail = fbm(u * 15.5, v * 15.5, seed + 5.3);
-      const continental = broad + Math.sin(u * Math.PI * 6 + v * 4.2) * 0.045 - latitude * 0.025;
+      const detail = fbm(u * profile.detailScale, v * profile.detailScale, seed + 5.3);
+      const continental = continentalValue(u, v, kind);
       const index = (y * canvas.width + x) * 4;
       let color;
       let elevation;
-      if (kind === "earth") {
-        if (latitude > 0.91) color = [220, 232, 231];
-        else if (continental > 0.67) color = detail > 0.62 ? [92, 111, 65] : [48, 101, 66];
-        else if (continental > 0.63) color = [180, 167, 105];
-        else if (continental > 0.585) color = [30, 126, 161];
-        else color = detail > 0.62 ? [25, 104, 151] : [11, 61, 113];
-      } else if (kind === "mars") {
-        if (latitude > 0.93) color = [232, 218, 194];
-        else if (continental > 0.68) color = detail > 0.61 ? [104, 114, 62] : [166, 72, 46];
-        else if (continental > 0.63) color = [199, 117, 73];
-        else if (continental > 0.585) color = [37, 126, 132];
-        else color = detail > 0.63 ? [20, 91, 105] : [10, 54, 74];
-      } else if (kind === "engineering") {
-        if (latitude > 0.93) color = [174, 216, 218];
-        else if (continental > 0.68) color = detail > 0.61 ? [52, 112, 95] : [58, 76, 82];
-        else if (continental > 0.63) color = [82, 126, 125];
-        else if (continental > 0.585) color = [23, 110, 133];
-        else color = detail > 0.62 ? [14, 70, 93] : [7, 38, 62];
-      } else {
-        if (latitude > 0.93) color = [238, 226, 183];
-        else if (continental > 0.68) color = detail > 0.61 ? [103, 124, 64] : [157, 122, 52];
-        else if (continental > 0.63) color = [202, 165, 76];
-        else if (continental > 0.585) color = [41, 112, 127];
-        else color = detail > 0.62 ? [25, 73, 111] : [16, 43, 85];
-      }
-      if (continental > 0.68) elevation = 145 + detail * 88;
-      else if (continental > 0.63) elevation = 104 + ((continental - 0.63) / 0.05) * 34;
-      else if (continental > 0.585) elevation = 48 + ((continental - 0.585) / 0.045) * 38;
+      const iceLine = profile.iceLine + (detail - 0.5) * 0.1;
+      if (latitude > iceLine) color = detail > 0.54 ? palette.ice : palette.snow;
+      else if (continental > profile.high + 0.045 && detail > 0.72 && kind !== "mars") color = palette.snow;
+      else if (continental > profile.high) color = detail > 0.6 ? palette.highland : palette.land;
+      else if (continental > profile.coast) color = detail > 0.58 ? palette.dry : palette.beach;
+      else if (continental > profile.shelf) color = palette.shelf;
+      else color = detail > 0.62 ? palette.ocean : palette.deepOcean;
+      if (continental > profile.high) elevation = 145 + detail * 88;
+      else if (continental > profile.coast) elevation = 104 + ((continental - profile.coast) / Math.max(0.001, profile.high - profile.coast)) * 34;
+      else if (continental > profile.shelf) elevation = 48 + ((continental - profile.shelf) / Math.max(0.001, profile.coast - profile.shelf)) * 38;
       else elevation = 28 + detail * 13;
+      if (kind === "mineral" && continental > profile.coast) elevation = Math.round(elevation / 18) * 18;
       image.data[index] = color[0];
       image.data[index + 1] = color[1];
       image.data[index + 2] = color[2];
@@ -142,32 +231,6 @@ function createPlanetTexture(kind, width = 768) {
   context.putImageData(image, 0, 0);
   heightContext.putImageData(heightImage, 0, 0);
 
-  if (kind === "mars") {
-    const craters = [[0.14, 0.3, 0.035], [0.32, 0.68, 0.052], [0.55, 0.38, 0.025], [0.72, 0.62, 0.06], [0.87, 0.26, 0.042], [0.94, 0.76, 0.024]];
-    craters.forEach(([x, y, radius]) => {
-      const gradient = context.createRadialGradient(x * canvas.width, y * canvas.height, radius * canvas.width * 0.25, x * canvas.width, y * canvas.height, radius * canvas.width);
-      gradient.addColorStop(0, "rgba(58,18,14,.72)");
-      gradient.addColorStop(0.58, "rgba(79,27,18,.48)");
-      gradient.addColorStop(0.78, "rgba(226,111,67,.42)");
-      gradient.addColorStop(1, "rgba(0,0,0,0)");
-      context.fillStyle = gradient;
-      context.beginPath();
-      context.ellipse(x * canvas.width, y * canvas.height, radius * canvas.width, radius * canvas.width * 0.48, 0, 0, Math.PI * 2);
-      context.fill();
-    });
-  }
-
-  if (kind === "engineering") {
-    context.strokeStyle = "rgba(104,205,220,.22)";
-    context.lineWidth = 1;
-    for (let x = 0; x < canvas.width; x += canvas.width / 32) {
-      context.beginPath(); context.moveTo(x, 0); context.lineTo(x, canvas.height); context.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += canvas.height / 16) {
-      context.beginPath(); context.moveTo(0, y); context.lineTo(canvas.width, y); context.stroke();
-    }
-  }
-
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = THREE.RepeatWrapping;
@@ -176,20 +239,26 @@ function createPlanetTexture(kind, width = 768) {
   return { map: texture, height: heightTexture };
 }
 
-function createCloudTexture(width = 512) {
+function createCloudTexture(width = 512, seed = 31.4) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = width / 2;
   const context = canvas.getContext("2d");
   const image = context.createImageData(canvas.width, canvas.height);
   for (let y = 0; y < canvas.height; y += 1) {
+    const v = y / canvas.height;
     for (let x = 0; x < canvas.width; x += 1) {
-      const cloud = fbm(x / canvas.width * 11, y / canvas.height * 7, 31.4);
-      const alpha = cloud > 0.69 ? Math.min(155, (cloud - 0.69) * 720) : 0;
+      const u = x / canvas.width;
+      const broadCloud = fbm(u * 8.4, v * 5.2, seed);
+      const cloudDetail = fbm(u * 18.5, v * 10.5, seed + 8.2);
+      const weatherBand = Math.sin(v * Math.PI * 9 + broadCloud * 5.5) * 0.035;
+      const cloud = broadCloud * 0.76 + cloudDetail * 0.24 + weatherBand;
+      const density = clamp01((cloud - 0.54) * 3.6);
+      const alpha = Math.round(Math.pow(density, 1.22) * 205);
       const index = (y * canvas.width + x) * 4;
-      image.data[index] = 235;
-      image.data[index + 1] = 243;
-      image.data[index + 2] = 248;
+      image.data[index] = 242;
+      image.data[index + 1] = 247;
+      image.data[index + 2] = 250;
       image.data[index + 3] = alpha;
     }
   }
@@ -198,6 +267,42 @@ function createCloudTexture(width = 512) {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = THREE.RepeatWrapping;
   return texture;
+}
+
+function createAtmosphereMaterial(color, opacity) {
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uColor: { value: new THREE.Color(color) },
+      uOpacity: { value: opacity },
+    },
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vViewDirection;
+      void main() {
+        vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+        vNormal = normalize(normalMatrix * normal);
+        vViewDirection = normalize(-viewPosition.xyz);
+        gl_Position = projectionMatrix * viewPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uColor;
+      uniform float uOpacity;
+      varying vec3 vNormal;
+      varying vec3 vViewDirection;
+      void main() {
+        float rim = pow(1.0 - max(dot(vNormal, vViewDirection), 0.0), 2.35);
+        float haze = 0.08 + rim * 1.2;
+        gl_FragColor = vec4(uColor, uOpacity * haze);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: false,
+  });
+  material.userData.opacityUniform = "uOpacity";
+  return material;
 }
 
 function lineBetween(a, b, material, radius = 0.025) {
@@ -264,26 +369,41 @@ function makePlanet(radius, color, segments, options = {}) {
       map: textures?.map ?? null,
       bumpMap: textures?.height ?? null,
       bumpScale: options.bumpScale ?? 0.055,
-      metalness: options.metalness ?? 0.18,
-      roughness: options.roughness ?? 0.76,
+      metalness: options.metalness ?? 0.04,
+      roughness: options.roughness ?? 0.82,
     }),
   );
   group.add(surface);
-  const grid = new THREE.Mesh(
-    new THREE.SphereGeometry(radius * 1.012, Math.max(16, Math.floor(segments * 0.55)), 14),
-    new THREE.MeshBasicMaterial({ color: options.grid ?? 0x496fd8, wireframe: true, transparent: true, opacity: options.gridOpacity ?? 0.065 }),
-  );
-  group.add(grid);
+  const gridOpacity = options.gridOpacity ?? 0;
+  let grid = null;
+  if (gridOpacity > 0.001) {
+    grid = new THREE.Mesh(
+      new THREE.SphereGeometry(radius * 1.012, Math.max(16, Math.floor(segments * 0.55)), 14),
+      new THREE.MeshBasicMaterial({ color: options.grid ?? 0x496fd8, wireframe: true, transparent: true, opacity: gridOpacity, depthWrite: false }),
+    );
+    group.add(grid);
+  }
   const atmosphere = new THREE.Mesh(
-    new THREE.SphereGeometry(radius * 1.055, segments, Math.max(16, Math.floor(segments * 0.66))),
-    new THREE.MeshBasicMaterial({ color: options.atmosphere ?? 0x315dff, transparent: true, opacity: options.atmosphereOpacity ?? 0.055, side: THREE.BackSide }),
+    new THREE.SphereGeometry(radius * 1.065, segments, Math.max(16, Math.floor(segments * 0.66))),
+    createAtmosphereMaterial(options.atmosphere ?? 0x6abaff, options.atmosphereOpacity ?? 0.11),
   );
   group.add(atmosphere);
   if (options.clouds) {
-    const cloudTexture = createCloudTexture(Math.min(512, options.textureSize || 512));
+    const cloudTexture = createCloudTexture(
+      options.cloudTextureSize ?? Math.min(384, options.textureSize || 384),
+      options.cloudSeed ?? PLANET_SEEDS[options.texture] + 29.3,
+    );
     const clouds = new THREE.Mesh(
-      new THREE.SphereGeometry(radius * 1.025, segments, Math.max(16, Math.floor(segments * 0.66))),
-      new THREE.MeshStandardMaterial({ map: cloudTexture, transparent: true, opacity: 0.58, depthWrite: false, roughness: 1 }),
+      new THREE.SphereGeometry(radius * 1.022, segments, Math.max(16, Math.floor(segments * 0.66))),
+      new THREE.MeshStandardMaterial({
+        map: cloudTexture,
+        color: options.cloudColor ?? 0xffffff,
+        transparent: true,
+        opacity: options.cloudOpacity ?? 0.72,
+        depthWrite: false,
+        roughness: 1,
+        metalness: 0,
+      }),
     );
     group.add(clouds);
     group.userData.clouds = clouds;
@@ -293,13 +413,22 @@ function makePlanet(radius, color, segments, options = {}) {
   return group;
 }
 
-function addSurfaceInstances(group, directions, radius, geometry, material, scale) {
+function addSurfaceInstances(group, directions, radius, geometry, material, scale, options = {}) {
   const mesh = new THREE.InstancedMesh(geometry, material, directions.length);
   directions.forEach((direction, index) => {
+    const variation = noiseHash(index + 31, Math.floor((options.seed ?? 1) * 997), options.seed ?? 1);
     TMP_NORMAL.copy(direction).normalize();
-    TMP_OBJECT.position.copy(TMP_NORMAL).multiplyScalar(radius);
+    const radialJitter = (variation - 0.5) * (options.radialJitter ?? 0);
+    TMP_OBJECT.position.copy(TMP_NORMAL).multiplyScalar(radius + radialJitter);
     TMP_OBJECT.quaternion.setFromUnitVectors(UP, TMP_NORMAL);
-    TMP_OBJECT.scale.set(...scale);
+    TMP_OBJECT.rotateY((options.yaw ?? 0) + (variation - 0.5) * (options.yawJitter ?? 0));
+    if (options.offset) {
+      TMP_OFFSET.set(...options.offset).applyQuaternion(TMP_OBJECT.quaternion);
+      TMP_OBJECT.position.add(TMP_OFFSET);
+    }
+    const jitter = 1 + (variation - 0.5) * (options.scaleJitter ?? 0);
+    const heightJitter = 1 + (variation - 0.5) * (options.heightJitter ?? options.scaleJitter ?? 0);
+    TMP_OBJECT.scale.set(scale[0] * jitter, scale[1] * heightJitter, scale[2] * jitter);
     TMP_OBJECT.updateMatrix();
     mesh.setMatrixAt(index, TMP_OBJECT.matrix);
   });
@@ -309,6 +438,18 @@ function addSurfaceInstances(group, directions, radius, geometry, material, scal
   TMP_OBJECT.quaternion.identity();
   TMP_OBJECT.scale.set(1, 1, 1);
   return mesh;
+}
+
+function addSurfaceArc(group, from, to, radius, material, width = 0.018) {
+  const points = [];
+  for (let index = 0; index <= 14; index += 1) {
+    const point = new THREE.Vector3().lerpVectors(from, to, index / 14).normalize().multiplyScalar(radius);
+    points.push(point);
+  }
+  const curve = new THREE.CatmullRomCurve3(points);
+  const arc = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, width, 5, false), material);
+  group.add(arc);
+  return arc;
 }
 
 function bendDisplay(geometry, amount = 0.018) {
@@ -333,7 +474,8 @@ export class WorldController {
     this.projectHover = -1;
     this.processHover = -1;
     this.statePair = {};
-    this.clock = new THREE.Clock();
+    this.timer = new THREE.Timer();
+    this.timer.connect(document);
     this.time = 0;
     this.hidden = document.hidden;
     this.disposed = false;
@@ -608,7 +750,7 @@ export class WorldController {
       const pylon = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.8, 0.16), this.materials.blueMetal.clone());
       pylon.position.set(Math.cos(angle) * 3.65, 0.75, Math.sin(angle) * 3.65);
       group.add(pylon);
-      this.launchLights.push(pylon.material);
+      this.launchLights.push(pylon);
     }
     const launchGate = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.075, 8, 128), this.materials.blueMetal);
     launchGate.position.set(0, 3.25, -2.8);
@@ -623,23 +765,42 @@ export class WorldController {
     this.servicesPlanet = makePlanet(4.25, 0x164f86, this.quality.name === "HIGH" ? 56 : 36, {
       texture: "earth",
       textureSize: this.quality.name === "HIGH" ? 768 : 512,
-      bumpScale: 0.075,
+      bumpScale: 0.045,
       clouds: this.quality.name !== "LOW",
-      atmosphere: 0x69b7ff,
-      atmosphereOpacity: 0.085,
-      grid: 0x8cc8ff,
-      gridOpacity: 0.045,
-      roughness: 0.82,
+      cloudOpacity: 0.68,
+      atmosphere: 0x6fbfff,
+      atmosphereOpacity: 0.14,
+      gridOpacity: 0,
+      roughness: 0.86,
     });
     group.add(this.servicesPlanet);
 
-    const treeDirections = createHabitableDirections("earth", 10, 0.4);
-    addSurfaceInstances(this.servicesPlanet, treeDirections, 4.36, new THREE.CylinderGeometry(0.5, 0.65, 1, 6), new THREE.MeshStandardMaterial({ color: 0x6b4b32, roughness: 1 }), [0.085, 0.25, 0.085]);
-    addSurfaceInstances(this.servicesPlanet, treeDirections, 4.64, new THREE.ConeGeometry(0.65, 1.4, 8), new THREE.MeshStandardMaterial({ color: 0x5b9a61, roughness: 0.94 }), [0.22, 0.31, 0.22]);
+    const forestCount = this.quality.mobile ? 14 : this.quality.name === "LOW" ? 18 : 28;
+    const treeDirections = createFeatureDirections("earth", forestCount, 0.4, {
+      focus: new THREE.Vector3(0.28, 0.22, 1), minTerrain: PLANET_PROFILES.earth.high, spacing: 0.115,
+    });
+    const bark = new THREE.MeshStandardMaterial({ color: 0x5b3924, roughness: 1 });
+    const pineDark = new THREE.MeshStandardMaterial({ color: 0x174f38, roughness: 0.96 });
+    const pineLight = new THREE.MeshStandardMaterial({ color: 0x347c4a, roughness: 0.94 });
+    addSurfaceInstances(this.servicesPlanet, treeDirections, 4.46, new THREE.CylinderGeometry(0.48, 0.65, 1, 7), bark, [0.15, 0.38, 0.15], { seed: 2.4, scaleJitter: 0.3, heightJitter: 0.55, yawJitter: Math.PI });
+    addSurfaceInstances(this.servicesPlanet, treeDirections, 4.72, new THREE.ConeGeometry(0.65, 1, 8), pineDark, [0.5, 0.67, 0.5], { seed: 2.4, scaleJitter: 0.28, heightJitter: 0.38, yawJitter: Math.PI });
+    addSurfaceInstances(this.servicesPlanet, treeDirections, 5.02, new THREE.ConeGeometry(0.58, 0.82, 8), pineLight, [0.4, 0.52, 0.4], { seed: 2.4, scaleJitter: 0.28, heightJitter: 0.38, yawJitter: Math.PI });
 
-    const cityDirections = createHabitableDirections("earth", 4, 3.1);
-    addSurfaceInstances(this.servicesPlanet, cityDirections, 4.48, new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xe6e1d3, metalness: 0.1, roughness: 0.72 }), [0.22, 0.42, 0.22]);
-    addSurfaceInstances(this.servicesPlanet, cityDirections, 4.91, new THREE.ConeGeometry(0.72, 0.65, 4), new THREE.MeshStandardMaterial({ color: 0xc76f42, roughness: 0.8 }), [0.28, 0.24, 0.28]);
+    const cottageCount = this.quality.mobile ? 3 : 5;
+    const cottageDirections = createFeatureDirections("earth", cottageCount, 3.1, {
+      focus: new THREE.Vector3(-0.42, 0.12, 1), minTerrain: PLANET_PROFILES.earth.coast,
+      maxTerrain: PLANET_PROFILES.earth.high + 0.02, spacing: 0.32,
+    });
+    const cottageWall = new THREE.MeshStandardMaterial({ color: 0xe7ddc8, metalness: 0.02, roughness: 0.88 });
+    const cottageRoof = new THREE.MeshStandardMaterial({ color: 0xa84f35, roughness: 0.9 });
+    const cottageTrim = new THREE.MeshStandardMaterial({ color: 0x523627, roughness: 0.86 });
+    const cottageGlow = new THREE.MeshBasicMaterial({ color: 0xffd78a, toneMapped: false });
+    const cottageSeed = 8.7;
+    addSurfaceInstances(this.servicesPlanet, cottageDirections, 4.5, new THREE.BoxGeometry(1, 1, 1), cottageWall, [0.42, 0.38, 0.34], { seed: cottageSeed, scaleJitter: 0.18, yawJitter: 1.2 });
+    addSurfaceInstances(this.servicesPlanet, cottageDirections, 4.78, new THREE.ConeGeometry(0.74, 0.5, 4), cottageRoof, [0.62, 0.62, 0.62], { seed: cottageSeed, scaleJitter: 0.18, yaw: Math.PI / 4, yawJitter: 1.2 });
+    addSurfaceInstances(this.servicesPlanet, cottageDirections, 4.52, new THREE.BoxGeometry(1, 1, 1), cottageTrim, [0.1, 0.2, 0.035], { seed: cottageSeed, yawJitter: 1.2, offset: [0, -0.02, 0.19] });
+    addSurfaceInstances(this.servicesPlanet, cottageDirections, 4.58, new THREE.BoxGeometry(1, 1, 1), cottageGlow, [0.105, 0.1, 0.025], { seed: cottageSeed, yawJitter: 1.2, offset: [-0.14, 0.02, 0.2] });
+    addSurfaceInstances(this.servicesPlanet, cottageDirections, 4.58, new THREE.BoxGeometry(1, 1, 1), cottageGlow, [0.105, 0.1, 0.025], { seed: cottageSeed, yawJitter: 1.2, offset: [0.14, 0.02, 0.2] });
 
     const orbit = new THREE.Mesh(new THREE.TorusGeometry(6.25, 0.025, 6, 160), this.materials.route);
     group.add(orbit);
@@ -685,23 +846,54 @@ export class WorldController {
     const planet = makePlanet(3.6, 0x8d3524, this.quality.name === "HIGH" ? 52 : 34, {
       texture: "mars",
       textureSize: this.quality.name === "HIGH" ? 768 : 512,
-      bumpScale: 0.105,
+      bumpScale: 0.05,
       clouds: this.quality.name !== "LOW",
-      atmosphere: 0xe5683c,
-      atmosphereOpacity: 0.065,
-      grid: 0xe79868,
-      gridOpacity: 0.04,
-      roughness: 0.91,
+      cloudOpacity: 0.72,
+      atmosphere: 0x78c8ff,
+      atmosphereOpacity: 0.135,
+      gridOpacity: 0,
+      roughness: 0.86,
     });
     this.projectsPlanet = planet;
     group.add(planet);
-    const colonyDirections = createHabitableDirections("mars", 3, 1.7);
-    addSurfaceInstances(planet, colonyDirections, 3.72, new THREE.CylinderGeometry(0.8, 1, 1, 10), new THREE.MeshStandardMaterial({ color: 0xe0c5a5, metalness: 0.42, roughness: 0.48 }), [0.28, 0.28, 0.28]);
-    addSurfaceInstances(planet, colonyDirections, 4.02, new THREE.SphereGeometry(0.5, 14, 8), new THREE.MeshPhysicalMaterial({ color: 0x80b8d7, transparent: true, opacity: 0.72, roughness: 0.16, metalness: 0.08 }), [0.34, 0.18, 0.34]);
-    const coralGroveDirections = createHabitableDirections("mars", 8, 4.8);
-    addSurfaceInstances(planet, coralGroveDirections, 3.69, new THREE.CylinderGeometry(0.45, 0.62, 1, 7), new THREE.MeshStandardMaterial({ color: 0x70432f, roughness: 1 }), [0.07, 0.2, 0.07]);
-    addSurfaceInstances(planet, coralGroveDirections, 3.92, new THREE.IcosahedronGeometry(0.45, 1), new THREE.MeshStandardMaterial({ color: 0x8fa25b, roughness: 0.92 }), [0.24, 0.3, 0.24]);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(6.1, 0.23, 10, 128), this.materials.metal);
+    const palmCount = this.quality.mobile ? 11 : this.quality.name === "LOW" ? 14 : 20;
+    const palmDirections = createFeatureDirections("mars", palmCount, 4.8, {
+      focus: new THREE.Vector3(0.34, 0.16, 1), minTerrain: PLANET_PROFILES.mars.coast + 0.012,
+      maxTerrain: PLANET_PROFILES.mars.high + 0.08, spacing: 0.135,
+    });
+    const palmTrunk = new THREE.MeshStandardMaterial({ color: 0x8b5b31, roughness: 1 });
+    const palmLeaf = new THREE.MeshStandardMaterial({ color: 0x2d8b54, roughness: 0.92 });
+    const palmLeafSun = new THREE.MeshStandardMaterial({ color: 0x59ae59, roughness: 0.9 });
+    addSurfaceInstances(planet, palmDirections, 3.78, new THREE.CylinderGeometry(0.32, 0.46, 1, 7), palmTrunk, [0.18, 0.54, 0.18], { seed: 14.2, scaleJitter: 0.3, heightJitter: 0.5, yawJitter: Math.PI });
+    addSurfaceInstances(planet, palmDirections, 4.06, new THREE.SphereGeometry(0.62, 9, 5), palmLeaf, [0.62, 0.2, 0.62], { seed: 14.2, scaleJitter: 0.32, yawJitter: Math.PI });
+    addSurfaceInstances(planet, palmDirections, 4.12, new THREE.SphereGeometry(0.52, 8, 4), palmLeafSun, [0.5, 0.12, 0.5], { seed: 14.2, scaleJitter: 0.35, yawJitter: Math.PI });
+
+    const villaCount = this.quality.mobile ? 3 : 5;
+    const villaDirections = createFeatureDirections("mars", villaCount, 1.7, {
+      focus: new THREE.Vector3(-0.36, 0.1, 1), minTerrain: PLANET_PROFILES.mars.coast + 0.01,
+      maxTerrain: PLANET_PROFILES.mars.high + 0.07, spacing: 0.34,
+    });
+    const villaSeed = 22.4;
+    const stucco = new THREE.MeshStandardMaterial({ color: 0xf2e7cc, roughness: 0.82 });
+    const terracotta = new THREE.MeshStandardMaterial({ color: 0xca6940, roughness: 0.88 });
+    const villaGlass = new THREE.MeshBasicMaterial({ color: 0x86e5e0, toneMapped: false });
+    addSurfaceInstances(planet, villaDirections, 3.82, new THREE.BoxGeometry(1, 1, 1), stucco, [0.52, 0.4, 0.4], { seed: villaSeed, scaleJitter: 0.25, yawJitter: 1.5 });
+    addSurfaceInstances(planet, villaDirections, 4.05, new THREE.BoxGeometry(1, 1, 1), terracotta, [0.62, 0.09, 0.5], { seed: villaSeed, scaleJitter: 0.22, yawJitter: 1.5 });
+    addSurfaceInstances(planet, villaDirections, 3.89, new THREE.BoxGeometry(1, 1, 1), villaGlass, [0.22, 0.13, 0.025], { seed: villaSeed, yawJitter: 1.5, offset: [0, 0, 0.22] });
+
+    const domeDirections = createFeatureDirections("mars", this.quality.mobile ? 1 : 2, 5.7, {
+      focus: new THREE.Vector3(0.02, 0.46, 1), minTerrain: PLANET_PROFILES.mars.coast, spacing: 0.55,
+    });
+    const domeBase = new THREE.MeshStandardMaterial({ color: 0xd2b882, roughness: 0.72, metalness: 0.08 });
+    const domeGlass = new THREE.MeshPhysicalMaterial({ color: 0x8bdad5, transparent: true, opacity: 0.68, roughness: 0.18, metalness: 0.04, clearcoat: 0.65 });
+    addSurfaceInstances(planet, domeDirections, 3.74, new THREE.CylinderGeometry(0.72, 0.82, 0.24, 16), domeBase, [0.58, 0.72, 0.58], { seed: 31.6, yawJitter: Math.PI });
+    addSurfaceInstances(planet, domeDirections, 3.82, new THREE.SphereGeometry(0.66, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), domeGlass, [0.72, 0.72, 0.72], { seed: 31.6, yawJitter: Math.PI });
+
+    const boardwalk = new THREE.MeshBasicMaterial({ color: 0xffca72, transparent: true, opacity: 0.72, toneMapped: false });
+    for (let index = 0; index < villaDirections.length - 1; index += 1) {
+      addSurfaceArc(planet, villaDirections[index], villaDirections[index + 1], 3.69, boardwalk, 0.014);
+    }
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(6.1, 0.12, 10, 128), this.materials.metal);
     ring.rotation.x = 0.12;
     group.add(ring);
     const innerRing = new THREE.Mesh(new THREE.TorusGeometry(5.4, 0.035, 6, 128), this.materials.signal);
@@ -748,28 +940,63 @@ export class WorldController {
     this.engineeringPlanet = makePlanet(4.4, 0x26343b, this.quality.name === "HIGH" ? 56 : 34, {
       texture: "engineering",
       textureSize: this.quality.name === "HIGH" ? 768 : 512,
-      bumpScale: 0.065,
+      bumpScale: 0.045,
       clouds: this.quality.name !== "LOW",
-      atmosphere: 0x58c4d7,
-      atmosphereOpacity: 0.055,
-      grid: 0x66c7d6,
-      gridOpacity: 0.085,
-      metalness: 0.58,
-      roughness: 0.48,
+      cloudOpacity: 0.66,
+      atmosphere: 0x71c4ee,
+      atmosphereOpacity: 0.14,
+      gridOpacity: 0,
+      metalness: 0.05,
+      roughness: 0.84,
     });
     group.add(this.engineeringPlanet);
-    const technoGroveDirections = createHabitableDirections("engineering", 6, 2.4);
-    addSurfaceInstances(this.engineeringPlanet, technoGroveDirections, 4.52, new THREE.CylinderGeometry(0.5, 0.65, 1, 8), new THREE.MeshStandardMaterial({ color: 0x315e58, roughness: 0.88 }), [0.08, 0.24, 0.08]);
-    addSurfaceInstances(this.engineeringPlanet, technoGroveDirections, 4.78, new THREE.IcosahedronGeometry(0.48, 2), new THREE.MeshStandardMaterial({ color: 0x55a58f, metalness: 0.18, roughness: 0.7 }), [0.24, 0.28, 0.24]);
+    const towerCount = this.quality.mobile ? 7 : this.quality.name === "LOW" ? 9 : 13;
+    const towerDirections = createFeatureDirections("engineering", towerCount, 2.4, {
+      focus: new THREE.Vector3(-0.26, 0.18, 1), minTerrain: PLANET_PROFILES.engineering.high,
+      spacing: 0.19,
+    });
+    const citySeed = 42.8;
+    const towerMetal = new THREE.MeshStandardMaterial({ color: 0x172e38, metalness: 0.68, roughness: 0.33 });
+    const towerCrown = new THREE.MeshStandardMaterial({ color: 0x37636a, metalness: 0.55, roughness: 0.38 });
+    const windowLight = new THREE.MeshBasicMaterial({ color: 0x65f1dc, toneMapped: false });
+    const beaconLight = new THREE.MeshBasicMaterial({ color: 0xffcf70, toneMapped: false });
+    addSurfaceInstances(this.engineeringPlanet, towerDirections, 4.67, new THREE.BoxGeometry(1, 1, 1), towerMetal, [0.34, 0.92, 0.34], { seed: citySeed, scaleJitter: 0.28, heightJitter: 0.62, yawJitter: 0.9 });
+    addSurfaceInstances(this.engineeringPlanet, towerDirections, 5.13, new THREE.BoxGeometry(1, 1, 1), towerCrown, [0.4, 0.12, 0.4], { seed: citySeed, scaleJitter: 0.25, yawJitter: 0.9 });
+    addSurfaceInstances(this.engineeringPlanet, towerDirections, 4.7, new THREE.BoxGeometry(1, 1, 1), windowLight, [0.22, 0.1, 0.025], { seed: citySeed, yawJitter: 0.9, offset: [0, -0.12, 0.19] });
+    addSurfaceInstances(this.engineeringPlanet, towerDirections, 4.94, new THREE.BoxGeometry(1, 1, 1), windowLight, [0.22, 0.08, 0.025], { seed: citySeed, yawJitter: 0.9, offset: [0, -0.05, 0.19] });
+    addSurfaceInstances(this.engineeringPlanet, towerDirections, 5.27, new THREE.SphereGeometry(0.08, 8, 7), beaconLight, [1, 1, 1], { seed: citySeed, scaleJitter: 0.35 });
+
+    const hubDirections = createFeatureDirections("engineering", this.quality.mobile ? 3 : 5, 6.1, {
+      focus: new THREE.Vector3(0.44, -0.02, 1), minTerrain: PLANET_PROFILES.engineering.coast,
+      spacing: 0.34,
+    });
+    const hubMaterial = new THREE.MeshStandardMaterial({ color: 0x294f56, metalness: 0.52, roughness: 0.4 });
+    addSurfaceInstances(this.engineeringPlanet, hubDirections, 4.51, new THREE.CylinderGeometry(0.72, 0.86, 0.22, 12), hubMaterial, [0.72, 0.8, 0.72], { seed: 51.2, scaleJitter: 0.24, yawJitter: Math.PI });
+    addSurfaceInstances(this.engineeringPlanet, hubDirections, 4.65, new THREE.CylinderGeometry(0.4, 0.58, 0.34, 10), towerCrown, [0.75, 0.9, 0.75], { seed: 51.2, scaleJitter: 0.24, yawJitter: Math.PI });
+    addSurfaceInstances(this.engineeringPlanet, hubDirections, 4.86, new THREE.SphereGeometry(0.09, 8, 7), windowLight, [1, 1, 1], { seed: 51.2, scaleJitter: 0.28 });
+
+    const transitLight = new THREE.MeshBasicMaterial({ color: 0x43d5c3, transparent: true, opacity: 0.82, toneMapped: false });
+    const infrastructure = [...towerDirections.slice(0, 5), ...hubDirections.slice(0, 3)];
+    for (let index = 0; index < infrastructure.length - 1; index += 1) {
+      addSurfaceArc(this.engineeringPlanet, infrastructure[index], infrastructure[index + 1], 4.51, transitLight, 0.018);
+    }
+
+    const groveCount = this.quality.mobile ? 9 : 16;
+    const technoGroveDirections = createFeatureDirections("engineering", groveCount, 4.2, {
+      focus: new THREE.Vector3(0.32, 0.3, 1), minTerrain: PLANET_PROFILES.engineering.high,
+      spacing: 0.14,
+    });
+    addSurfaceInstances(this.engineeringPlanet, technoGroveDirections, 4.57, new THREE.CylinderGeometry(0.38, 0.5, 1, 7), new THREE.MeshStandardMaterial({ color: 0x594736, roughness: 0.96 }), [0.13, 0.34, 0.13], { seed: 57.1, scaleJitter: 0.35, heightJitter: 0.42, yawJitter: Math.PI });
+    addSurfaceInstances(this.engineeringPlanet, technoGroveDirections, 4.8, new THREE.SphereGeometry(0.5, 9, 6), new THREE.MeshStandardMaterial({ color: 0x3b8b60, metalness: 0.02, roughness: 0.88 }), [0.45, 0.48, 0.45], { seed: 57.1, scaleJitter: 0.32, heightJitter: 0.38, yawJitter: Math.PI });
     this.engineeringRings = [];
-    for (let i = 0; i < 4; i += 1) {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(5 + i * 0.52, 0.055 + i * 0.014, 8, 128), i === 2 ? this.materials.blueMetal : this.materials.metal);
+    for (let i = 0; i < 3; i += 1) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(5.1 + i * 0.62, 0.035 + i * 0.008, 8, 128), i === 1 ? this.materials.blueMetal : this.materials.metal);
       ring.rotation.set(i * 0.56, i * 0.42, i * 0.2);
       group.add(ring);
       this.engineeringRings.push(ring);
     }
-    const moduleCount = this.quality.mobile ? 18 : 34;
-    const geometry = new THREE.CapsuleGeometry(0.14, 0.32, 4, 8);
+    const moduleCount = this.quality.mobile ? 10 : 18;
+    const geometry = new THREE.CapsuleGeometry(0.11, 0.24, 4, 8);
     const modules = new THREE.InstancedMesh(geometry, this.materials.blueMetal, moduleCount);
     for (let i = 0; i < moduleCount; i += 1) {
       const angle = i * 2.399;
@@ -797,22 +1024,54 @@ export class WorldController {
     const center = makePlanet(2.15, 0x715d35, this.quality.name === "HIGH" ? 42 : 28, {
       texture: "mineral",
       textureSize: this.quality.name === "HIGH" ? 640 : 384,
-      bumpScale: 0.08,
+      bumpScale: 0.045,
       clouds: this.quality.name !== "LOW",
-      atmosphere: 0xe2bb64,
-      atmosphereOpacity: 0.05,
-      grid: 0xd8b762,
-      gridOpacity: 0.08,
-      metalness: 0.3,
-      roughness: 0.66,
+      cloudOpacity: 0.7,
+      atmosphere: 0x83c9ef,
+      atmosphereOpacity: 0.14,
+      gridOpacity: 0,
+      metalness: 0.04,
+      roughness: 0.86,
     });
     this.processPlanet = center;
     group.add(center);
-    const goldenGroveDirections = createHabitableDirections("mineral", 5, 0.9);
-    addSurfaceInstances(center, goldenGroveDirections, 2.23, new THREE.CylinderGeometry(0.4, 0.58, 1, 7), new THREE.MeshStandardMaterial({ color: 0x654b2a, roughness: 1 }), [0.065, 0.18, 0.065]);
-    addSurfaceInstances(center, goldenGroveDirections, 2.43, new THREE.IcosahedronGeometry(0.38, 1), new THREE.MeshStandardMaterial({ color: 0xa4ad62, roughness: 0.9 }), [0.2, 0.25, 0.2]);
-    const processSettlements = createHabitableDirections("mineral", 2, 3.7);
-    addSurfaceInstances(center, processSettlements, 2.27, new THREE.CylinderGeometry(0.65, 0.85, 1, 10), new THREE.MeshStandardMaterial({ color: 0xe1c778, metalness: 0.35, roughness: 0.52 }), [0.18, 0.26, 0.18]);
+    const terraceDirections = createFeatureDirections("mineral", this.quality.mobile ? 2 : 3, 0.9, {
+      focus: new THREE.Vector3(-0.22, 0.28, 1), minTerrain: PLANET_PROFILES.mineral.coast,
+      spacing: 0.56,
+    });
+    const terraceEarth = new THREE.MeshStandardMaterial({ color: 0xb98432, roughness: 0.95 });
+    const terraceStone = new THREE.MeshStandardMaterial({ color: 0xd5ad5a, roughness: 0.9 });
+    const terraceGreen = new THREE.MeshStandardMaterial({ color: 0x758f3d, roughness: 0.96 });
+    addSurfaceInstances(center, terraceDirections, 2.21, new THREE.CylinderGeometry(0.94, 1.02, 0.14, 16), terraceEarth, [0.82, 1, 0.82], { seed: 63.8, scaleJitter: 0.2, yawJitter: Math.PI });
+    addSurfaceInstances(center, terraceDirections, 2.32, new THREE.CylinderGeometry(0.78, 0.86, 0.12, 16), terraceStone, [0.78, 1, 0.78], { seed: 63.8, scaleJitter: 0.2, yawJitter: Math.PI });
+    addSurfaceInstances(center, terraceDirections, 2.42, new THREE.CylinderGeometry(0.61, 0.68, 0.1, 16), terraceEarth, [0.75, 1, 0.75], { seed: 63.8, scaleJitter: 0.2, yawJitter: Math.PI });
+    addSurfaceInstances(center, terraceDirections, 2.49, new THREE.CylinderGeometry(0.5, 0.54, 0.055, 16), terraceGreen, [0.72, 1, 0.72], { seed: 63.8, scaleJitter: 0.2, yawJitter: Math.PI });
+
+    const hutDirections = createFeatureDirections("mineral", this.quality.mobile ? 3 : 5, 3.7, {
+      focus: new THREE.Vector3(0.38, 0.05, 1), minTerrain: PLANET_PROFILES.mineral.coast,
+      maxTerrain: PLANET_PROFILES.mineral.high + 0.09, spacing: 0.37,
+    });
+    const hutSeed = 71.9;
+    const hutWall = new THREE.MeshStandardMaterial({ color: 0xdfbd78, roughness: 0.92 });
+    const thatch = new THREE.MeshStandardMaterial({ color: 0x8f612d, roughness: 1 });
+    const hutGlow = new THREE.MeshBasicMaterial({ color: 0xffd36a, toneMapped: false });
+    addSurfaceInstances(center, hutDirections, 2.31, new THREE.CylinderGeometry(0.48, 0.55, 0.38, 10), hutWall, [0.76, 1, 0.76], { seed: hutSeed, scaleJitter: 0.2, yawJitter: Math.PI });
+    addSurfaceInstances(center, hutDirections, 2.58, new THREE.ConeGeometry(0.67, 0.4, 10), thatch, [0.72, 0.9, 0.72], { seed: hutSeed, scaleJitter: 0.2, yawJitter: Math.PI });
+    addSurfaceInstances(center, hutDirections, 2.35, new THREE.BoxGeometry(1, 1, 1), hutGlow, [0.12, 0.12, 0.025], { seed: hutSeed, yawJitter: Math.PI, offset: [0, 0, 0.37] });
+
+    const cypressCount = this.quality.mobile ? 8 : 14;
+    const goldenGroveDirections = createFeatureDirections("mineral", cypressCount, 5.1, {
+      focus: new THREE.Vector3(-0.02, 0.22, 1), minTerrain: PLANET_PROFILES.mineral.high,
+      spacing: 0.16,
+    });
+    addSurfaceInstances(center, goldenGroveDirections, 2.3, new THREE.CylinderGeometry(0.25, 0.32, 1, 7), new THREE.MeshStandardMaterial({ color: 0x5f4329, roughness: 1 }), [0.18, 0.38, 0.18], { seed: 76.3, scaleJitter: 0.28, heightJitter: 0.4, yawJitter: Math.PI });
+    addSurfaceInstances(center, goldenGroveDirections, 2.61, new THREE.ConeGeometry(0.42, 1.15, 9), new THREE.MeshStandardMaterial({ color: 0x365d35, roughness: 0.96 }), [0.58, 0.78, 0.58], { seed: 76.3, scaleJitter: 0.28, heightJitter: 0.42, yawJitter: Math.PI });
+
+    const gardenPath = new THREE.MeshBasicMaterial({ color: 0xffd679, transparent: true, opacity: 0.72, toneMapped: false });
+    const gardenStops = [...terraceDirections, ...hutDirections];
+    for (let index = 0; index < gardenStops.length - 1; index += 1) {
+      addSurfaceArc(center, gardenStops[index], gardenStops[index + 1], 2.215, gardenPath, 0.013);
+    }
     const orbit = new THREE.Mesh(new THREE.TorusGeometry(6, 0.035, 6, 160), this.materials.route);
     group.add(orbit);
     this.processGates = [];
@@ -870,7 +1129,7 @@ export class WorldController {
     };
     this.onVisibility = () => {
       this.hidden = document.hidden;
-      if (!this.hidden) this.clock.getDelta();
+      if (!this.hidden) this.timer.reset();
     };
     window.addEventListener("resize", this.onResize, { passive: true });
     if (!this.quality.mobile && !this.quality.reducedMotion) window.addEventListener("pointermove", this.onPointerMove, { passive: true });
@@ -910,88 +1169,93 @@ export class WorldController {
     this.routeCurve.getPointAt(routeT, TMP_POSITION);
     this.applyFlightClearance(TMP_POSITION);
     this.routeCurve.getTangentAt(Math.min(0.999, routeT), TMP_DIRECTION).normalize();
-    this.ship.position.lerp(TMP_POSITION, 1 - Math.exp(-delta * 8));
+    if (this.quality.reducedMotion) this.ship.position.copy(TMP_POSITION);
+    else this.ship.position.lerp(TMP_POSITION, 1 - Math.exp(-delta * 8));
     TMP_QUATERNION.setFromUnitVectors(FORWARD, TMP_DIRECTION);
     const bank = this.quality.reducedMotion ? 0 : Math.sin(progress * Math.PI * 7) * 0.075;
     TMP_BANK_QUATERNION.setFromAxisAngle(FORWARD, bank);
     TMP_QUATERNION.multiply(TMP_BANK_QUATERNION);
-    this.ship.quaternion.slerp(TMP_QUATERNION, 1 - Math.exp(-delta * 5));
+    if (this.quality.reducedMotion) this.ship.quaternion.copy(TMP_QUATERNION);
+    else this.ship.quaternion.slerp(TMP_QUATERNION, 1 - Math.exp(-delta * 5));
     const introScale = 0.62 + this.params.intro * 0.38;
     this.ship.scale.setScalar((this.quality.mobile ? 0.72 : 0.9) * introScale);
     this.ship.visible = this.params.intro > 0.04;
-    const pulse = 0.86 + Math.sin(time * 3.8) * 0.1 + Math.sin(progress * Math.PI * 6) * 0.08;
+    const motionTime = this.quality.reducedMotion ? 0 : time;
+    const pulse = 0.86 + Math.sin(motionTime * 3.8) * 0.1 + Math.sin(progress * Math.PI * 6) * 0.08;
     this.engineGlows.forEach((glow) => glow.scale.setScalar(pulse));
     this.followLight.position.copy(this.ship.position).addScaledVector(TMP_DIRECTION, -1.4);
     this.routeCurve.getPointAt(Math.max(0, routeT - 0.012), this.routeSignal.position);
   }
 
   updateDestinations(progress, time, delta) {
+    const motionDelta = this.quality.reducedMotion ? 0 : delta;
+    const motionTime = this.quality.reducedMotion ? 0 : time;
     const launchActivity = 1 - range(Math.abs(progress - 0.02), 0.08, 0.2);
     setGroupOpacity(this.launchStation, launchActivity);
-    this.launchLights.forEach((material, index) => {
-      material.emissiveIntensity = this.params.intro * (0.45 + Math.sin(time * 2.2 + index) * 0.15);
+    this.launchLights.forEach((pylon, index) => {
+      pylon.material.emissiveIntensity = this.params.intro * (0.45 + Math.sin(motionTime * 2.2 + index) * 0.15);
     });
 
     const servicesActivity = 1 - range(Math.abs(progress - 0.19), 0.1, 0.19);
     setGroupOpacity(this.servicesGroup, servicesActivity);
-    this.servicesPlanet.rotation.y += delta * 0.027;
-    this.servicesPlanet.userData.grid.rotation.y -= delta * 0.012;
-    if (this.servicesPlanet.userData.clouds) this.servicesPlanet.userData.clouds.rotation.y += delta * 0.009;
-    const servicePhase = this.serviceHover >= 0 ? this.serviceHover : range(progress, 0.1, 0.3) * 3;
+    this.servicesPlanet.rotation.y += motionDelta * 0.027;
+    if (this.servicesPlanet.userData.grid) this.servicesPlanet.userData.grid.rotation.y -= motionDelta * 0.012;
+    if (this.servicesPlanet.userData.clouds) this.servicesPlanet.userData.clouds.rotation.y += motionDelta * 0.009;
+    const servicePhase = this.serviceHover >= 0 ? this.serviceHover : range(progress, 0.19, 0.39) * 3;
     this.serviceSatellites.forEach((satellite, index) => {
       const active = 1 - Math.min(1, Math.abs(servicePhase - index));
       satellite.scale.setScalar(0.88 + active * 0.24);
       satellite.position.z = satellite.userData.base.z + active * 0.72;
       satellite.userData.material.emissiveIntensity = 0.35 + active * 1.35;
-      satellite.rotation.y += delta * (0.06 + active * 0.12);
+      satellite.rotation.y += motionDelta * (0.06 + active * 0.12);
     });
 
     const projectsActivity = 1 - range(Math.abs(progress - 0.39), 0.1, 0.2);
     setGroupOpacity(this.projectsGroup, projectsActivity);
-    this.projectsPlanet.rotation.y += delta * 0.018;
-    if (this.projectsPlanet.userData.clouds) this.projectsPlanet.userData.clouds.rotation.y -= delta * 0.007;
-    this.projectRing.rotation.z += delta * 0.018;
-    const projectPhase = this.projectHover >= 0 ? this.projectHover : range(progress, 0.3, 0.5) * 2;
+    this.projectsPlanet.rotation.y += motionDelta * 0.018;
+    if (this.projectsPlanet.userData.clouds) this.projectsPlanet.userData.clouds.rotation.y -= motionDelta * 0.007;
+    this.projectRing.rotation.z += motionDelta * 0.018;
+    const projectPhase = this.projectHover >= 0 ? this.projectHover : range(progress, 0.39, 0.59) * 2;
     this.projectDocks.forEach((dock, index) => {
       const active = 1 - Math.min(1, Math.abs(projectPhase - index));
       dock.position.z = dock.userData.base.z + active * 1.15;
       dock.scale.setScalar(0.86 + active * 0.16);
-      dock.userData.screenMaterial.opacity = 0.4 + active * 0.6;
+      dock.userData.screenMaterial.opacity = (0.4 + active * 0.6) * this.projectsGroup.userData.activity;
     });
 
     const engineeringActivity = 1 - range(Math.abs(progress - 0.59), 0.1, 0.2);
     setGroupOpacity(this.engineeringGroup, engineeringActivity);
-    this.engineeringPlanet.rotation.y += delta * 0.019;
-    if (this.engineeringPlanet.userData.clouds) this.engineeringPlanet.userData.clouds.rotation.y += delta * 0.006;
+    this.engineeringPlanet.rotation.y += motionDelta * 0.019;
+    if (this.engineeringPlanet.userData.clouds) this.engineeringPlanet.userData.clouds.rotation.y += motionDelta * 0.006;
     this.engineeringRings.forEach((ring, index) => {
-      ring.rotation.x += delta * (index % 2 ? -0.065 : 0.045);
-      ring.rotation.z += delta * (0.02 + index * 0.008);
+      ring.rotation.x += motionDelta * (index % 2 ? -0.065 : 0.045);
+      ring.rotation.z += motionDelta * (0.02 + index * 0.008);
     });
     this.engineeringPackets.forEach((packet, index) => {
-      const angle = time * (0.18 + index * 0.012) + index * 0.87;
+      const angle = motionTime * (0.18 + index * 0.012) + index * 0.87;
       const radius = 5 + (index % 4) * 0.52;
       packet.position.set(Math.cos(angle) * radius, Math.sin(angle * 1.3) * radius * 0.52, Math.sin(angle) * radius * 0.42);
     });
 
     const processActivity = 1 - range(Math.abs(progress - 0.79), 0.11, 0.21);
     setGroupOpacity(this.processGroup, processActivity);
-    this.processPlanet.rotation.y += delta * 0.014;
-    if (this.processPlanet.userData.clouds) this.processPlanet.userData.clouds.rotation.y -= delta * 0.006;
-    const processPhase = this.processHover >= 0 ? this.processHover : range(progress, 0.69, 0.9) * 4;
+    this.processPlanet.rotation.y += motionDelta * 0.014;
+    if (this.processPlanet.userData.clouds) this.processPlanet.userData.clouds.rotation.y -= motionDelta * 0.006;
+    const processPhase = this.processHover >= 0 ? this.processHover : range(progress, 0.79, 1) * 4;
     this.processGates.forEach((gate, index) => {
       const active = 1 - Math.min(1, Math.abs(processPhase - index));
       const complete = index <= Math.floor(processPhase) ? 1 : 0;
       gate.scale.setScalar(0.88 + active * 0.2);
       gate.userData.material.emissiveIntensity = 0.25 + complete * 0.55 + active * 0.9;
-      gate.userData.light.opacity = 0.12 + complete * 0.25 + active * 0.55;
+      gate.userData.light.opacity = (0.12 + complete * 0.25 + active * 0.55) * this.processGroup.userData.activity;
     });
 
     const contactActivity = range(progress, 0.82, 0.98);
     setGroupOpacity(this.contactGroup, contactActivity);
-    const beaconPulse = 0.9 + Math.sin(time * 1.65) * 0.12;
+    const beaconPulse = 0.9 + Math.sin(motionTime * 1.65) * 0.12;
     this.beaconHead.scale.setScalar(beaconPulse);
-    this.beaconBeam.material.opacity = (0.035 + Math.sin(time * 1.2) * 0.012) * contactActivity;
-    this.beaconBeam.rotation.y += delta * 0.04;
+    this.beaconBeam.material.opacity = (0.035 + Math.sin(motionTime * 1.2) * 0.012) * this.contactGroup.userData.activity;
+    this.beaconBeam.rotation.y += motionDelta * 0.04;
   }
 
   updateWorld(time, delta) {
@@ -1008,8 +1272,13 @@ export class WorldController {
       TMP_POSITION.y += this.pointer.y * (this.quality.mobile ? 0.04 : 0.17);
     }
     if (this.quality.mobile) TMP_POSITION.z += 2.5;
-    this.camera.position.lerp(TMP_POSITION, 1 - Math.exp(-delta * 5));
-    this.cameraTarget.lerp(TMP_TARGET, 1 - Math.exp(-delta * 5));
+    if (this.quality.reducedMotion) {
+      this.camera.position.copy(TMP_POSITION);
+      this.cameraTarget.copy(TMP_TARGET);
+    } else {
+      this.camera.position.lerp(TMP_POSITION, 1 - Math.exp(-delta * 5));
+      this.cameraTarget.lerp(TMP_TARGET, 1 - Math.exp(-delta * 5));
+    }
     this.camera.fov = THREE.MathUtils.lerp(from.fov, to.fov, local) + (this.quality.mobile ? 6 : 0);
     this.camera.updateProjectionMatrix();
     this.camera.lookAt(this.cameraTarget);
@@ -1018,13 +1287,14 @@ export class WorldController {
     this.stars.position.z = this.camera.position.z * 0.018;
   }
 
-  tick() {
+  tick(timestamp) {
     if (this.disposed) return;
     if (this.hidden) {
       this.raf = requestAnimationFrame(this.tick);
       return;
     }
-    const delta = Math.min(this.clock.getDelta(), 0.05);
+    this.timer.update(timestamp);
+    const delta = Math.min(this.timer.getDelta(), 0.05);
     this.time += delta;
     this.updateWorld(this.time, delta);
     this.renderer.render(this.scene, this.camera);
@@ -1037,6 +1307,7 @@ export class WorldController {
     window.removeEventListener("resize", this.onResize);
     window.removeEventListener("pointermove", this.onPointerMove);
     document.removeEventListener("visibilitychange", this.onVisibility);
+    this.timer.dispose();
     this.scene.traverse((object) => {
       object.geometry?.dispose?.();
       const materials = object.material ? (Array.isArray(object.material) ? object.material : [object.material]) : [];
