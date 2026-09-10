@@ -1,0 +1,54 @@
+{
+  "nav": ["Home", "Product", "About", "Service"],
+  "contact": "Contact",
+  "consult": "Get advice",
+  "skip": "Skip to content",
+  "hero": {
+    "eyebrow": "SIMPLE  ·  SCALABLE  ·  YOURS",
+    "title": "Build. Deploy. Scale.",
+    "copy": "Reliable digital products for real businesses.",
+    "primary": "Get started",
+    "secondary": "Explore"
+  },
+  "services": {
+    "eyebrow": "WHAT GAUAS CAN DO",
+    "title": "Everything you need to start and grow",
+    "copy": "Focus on your product. Gauas takes care of design, delivery, and improvement.",
+    "all": "View all",
+    "items": [
+      ["Websites", "Company and product websites"],
+      ["Landing Pages", "Clear, effective campaign pages"],
+      ["Customer Portals", "One place to track and request"],
+      ["Operations", "Clearer work and business data"],
+      ["Online Platforms", "Digital products ready to scale"],
+      ["Ongoing Care", "Support and improvement after launch"]
+    ]
+  },
+  "stats": {
+    "eyebrow": "TRUSTED RESULTS",
+    "title": "Numbers that speak",
+    "items": [
+      ["20+", "Products delivered"],
+      ["10,000 CCU", "Concurrent load target"],
+      ["99.9%", "Operational stability goal"]
+    ]
+  },
+  "growth": {
+    "eyebrow": "BUILT DIFFERENTLY",
+    "title": "Start with enough.\nReady for the future.",
+    "copy": "You do not need an oversized system on day one. Gauas designs for today's needs while keeping a clear path for growth.",
+    "action": "Learn more",
+    "alt": "Transparent product layers with a green growth stream"
+  },
+  "cta": {
+    "eyebrow": "LET'S BUILD",
+    "title": "Turn your idea into something real.",
+    "copy": "From a first product to the next stage of growth, Gauas is ready to work alongside you.",
+    "action": "Contact us"
+  },
+  "footer": {
+    "descriptor": "Modern Application Builder",
+    "rights": "© GAUAS. All rights reserved.",
+    "mantra": "Build  ·  Learn  ·  Share  ·  Grow"
+  }
+}

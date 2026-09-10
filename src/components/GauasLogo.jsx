@@ -1,3 +1,3 @@
 export function GauasLogo({ className = "" }) {
-  return <span className={`gauas-logo ${className}`} aria-hidden="true" />;
+  return <img className={`gauas-logo ${className}`} src="/assets/full_logo.png" alt="" aria-hidden="true" />;
 }
