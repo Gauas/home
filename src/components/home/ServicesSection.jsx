@@ -1,20 +1,12 @@
-import {
-  LayoutTemplate,
-  Layers3,
-  LifeBuoy,
-  MousePointerClick,
-  UserRound,
-  Workflow,
-} from "lucide-react";
 import { ActionLink } from "../common/ActionLink";
+import { CountUpValue } from "../common/CountUpValue";
 
-const SERVICE_ICONS = [
-  LayoutTemplate,
-  MousePointerClick,
-  UserRound,
-  Workflow,
-  Layers3,
-  LifeBuoy,
+const SERVICE_ASSETS = [
+  "/assets/emoji/website.svg",
+  "/assets/emoji/mobile.svg",
+  "/assets/emoji/ai.svg",
+  "/assets/emoji/tool.svg",
+  "/assets/emoji/support.svg",
 ];
 
 export function ServicesSection({ translations, statistics }) {
@@ -31,10 +23,17 @@ export function ServicesSection({ translations, statistics }) {
         </div>
         <div className="service-row" id="industries">
           {translations.items.map(([title, copy], index) => {
-            const Icon = SERVICE_ICONS[index];
             return (
               <article key={title}>
-                <span><Icon size={23} /></span>
+                <span className="service-icon-tile" aria-hidden="true">
+                  <img
+                    className="service-icon"
+                    src={SERVICE_ASSETS[index]}
+                    alt=""
+                    width="36"
+                    height="36"
+                  />
+                </span>
                 <h3>{title}</h3>
                 <p>{copy}</p>
               </article>
@@ -46,9 +45,9 @@ export function ServicesSection({ translations, statistics }) {
             <p className="eyebrow dark">{statistics.eyebrow}</p>
             <h2>{statistics.title}</h2>
           </div>
-          {statistics.items.map(([value, label]) => (
-            <div key={value}>
-              <strong>{value}</strong>
+          {statistics.items.map(({ value, suffix, label }) => (
+            <div key={label}>
+              <CountUpValue value={value} suffix={suffix} />
               <span>{label}</span>
             </div>
           ))}

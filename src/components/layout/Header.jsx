@@ -1,18 +1,24 @@
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { NAVIGATION_TARGETS } from "../../config/site";
 import { scrollToSection } from "../../utils/scrollToSection";
-import { ActionLink } from "../common/ActionLink";
 import { BrandButton } from "../common/BrandButton";
 
-export function Header({ translations }) {
+export function Header({ translations, solid = false }) {
+  const routeNavigate = useNavigate();
+  const { pathname } = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isServicesOpen, setIsServicesOpen] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
     const closeOnEscape = (event) => {
-      if (event.key === "Escape") setIsOpen(false);
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        setIsServicesOpen(false);
+      }
     };
 
     window.addEventListener("keydown", closeOnEscape);
@@ -37,43 +43,66 @@ export function Header({ translations }) {
     };
   }, []);
 
-  const navigate = (sectionId) => {
-    scrollToSection(sectionId);
+  const navigateToSection = (sectionId) => {
+    if (pathname !== "/") {
+      routeNavigate("/", { state: { scrollTarget: sectionId } });
+    } else {
+      scrollToSection(sectionId);
+    }
     setIsOpen(false);
+    setIsServicesOpen(false);
+  };
+
+  const serviceItems = translations.services.items.slice(0, 4);
+  const serviceIndex = translations.nav.length - 1;
+  const openService = (index) => {
+    if (index === 2) {
+      routeNavigate("/ai-integration");
+      setIsOpen(false);
+      setIsServicesOpen(false);
+      return;
+    }
+    navigateToSection("solutions");
   };
 
   const className = [
     "header",
     isOpen && "open",
     isScrolled && "scrolled",
+    solid && "solid",
   ].filter(Boolean).join(" ");
 
   return (
     <header className={className}>
       <div className="header-inner">
-        <BrandButton label={translations.nav[0]} />
+        <BrandButton label={translations.nav[0]} onClick={() => navigateToSection("top")} />
         <nav className="desktop-nav" aria-label="Primary navigation">
-          {translations.nav.map((label, index) => (
-            <button
-              type="button"
-              onClick={() => scrollToSection(NAVIGATION_TARGETS[index])}
-              key={NAVIGATION_TARGETS[index]}
-            >
-              {label}
-            </button>
-          ))}
+          {translations.nav.map((label, index) => {
+            if (index !== serviceIndex) {
+              return <button type="button" onClick={() => navigateToSection(NAVIGATION_TARGETS[index])} key={NAVIGATION_TARGETS[index]}>{label}</button>;
+            }
+
+            return (
+              <div className="service-dropdown" key={NAVIGATION_TARGETS[index]} onMouseEnter={() => setIsServicesOpen(true)} onMouseLeave={() => setIsServicesOpen(false)}>
+                <button className="service-trigger" type="button" aria-expanded={isServicesOpen} aria-controls="desktop-services" onClick={() => setIsServicesOpen(true)}>
+                  {label}<ChevronDown size={13} strokeWidth={1.8} aria-hidden="true" />
+                </button>
+                <div className={`service-dropdown-panel ${isServicesOpen ? "visible" : ""}`} id="desktop-services">
+                  {serviceItems.map(([title, description], itemIndex) => <button type="button" onClick={() => openService(itemIndex)} key={title}><strong>{title}</strong><span>{description}</span></button>)}
+                </div>
+              </div>
+            );
+          })}
         </nav>
         <div className="header-actions">
           <button
             className="header-contact"
             type="button"
-            onClick={() => scrollToSection("contact")}
+            onClick={() => navigateToSection("contact")}
           >
             {translations.contact}
           </button>
-          <ActionLink className="lime-button" to="contact">
-            {translations.consult}
-          </ActionLink>
+          <button className="lime-button" type="button" onClick={() => navigateToSection("contact")}>{translations.consult}</button>
         </div>
         <button
           className="menu-button"
@@ -87,22 +116,23 @@ export function Header({ translations }) {
         </button>
       </div>
       <nav className="mobile-nav" id="mobile-nav">
-        {translations.nav.map((label, index) => (
-          <button
-            type="button"
-            key={NAVIGATION_TARGETS[index]}
-            onClick={() => navigate(NAVIGATION_TARGETS[index])}
-          >
-            {label}
-          </button>
-        ))}
-        <button type="button" onClick={() => navigate("contact")}>
+        {translations.nav.map((label, index) => {
+          if (index !== serviceIndex) {
+            return <button type="button" key={NAVIGATION_TARGETS[index]} onClick={() => navigateToSection(NAVIGATION_TARGETS[index])}>{label}</button>;
+          }
+
+          return <div className={`mobile-service-menu ${isServicesOpen ? "visible" : ""}`} key={NAVIGATION_TARGETS[index]}>
+            <button className="mobile-service-trigger" type="button" aria-expanded={isServicesOpen} onClick={() => setIsServicesOpen((current) => !current)}>{label}<ChevronDown size={15} aria-hidden="true" /></button>
+            <div className="mobile-service-panel">{serviceItems.map(([title], itemIndex) => <button type="button" onClick={() => openService(itemIndex)} key={title}>{title}</button>)}</div>
+          </div>;
+        })}
+        <button type="button" onClick={() => navigateToSection("contact")}>
           {translations.contact}
         </button>
         <button
           className="lime-button"
           type="button"
-          onClick={() => navigate("contact")}
+          onClick={() => navigateToSection("contact")}
         >
           {translations.consult}
         </button>

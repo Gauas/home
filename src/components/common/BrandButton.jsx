@@ -1,12 +1,12 @@
 import { GauasLogo } from "../GauasLogo";
 import { scrollToSection } from "../../utils/scrollToSection";
 
-export function BrandButton({ label }) {
+export function BrandButton({ label, onClick }) {
   return (
     <button
       className="brand"
       type="button"
-      onClick={() => scrollToSection("top")}
+      onClick={onClick || (() => scrollToSection("top"))}
       aria-label={`GAUAS — ${label}`}
     >
       <GauasLogo />

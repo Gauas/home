@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { HERO_VIDEO_SOURCES } from "../../config/site";
 import { ActionLink } from "../common/ActionLink";
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
@@ -28,8 +29,8 @@ export function HeroSection({ translations }) {
           poster="/assets/new-hero-poster.webp"
           aria-hidden="true"
         >
-          <source src="/video/gauas-hero-loop.webm" type="video/webm" />
-          <source src="/video/gauas-hero-loop.mp4" type="video/mp4" />
+          <source src={HERO_VIDEO_SOURCES.webm} type="video/webm" />
+          <source src={HERO_VIDEO_SOURCES.mp4} type="video/mp4" />
         </video>
       )}
       <div className="hero-shade" />

@@ -16,21 +16,20 @@
     "copy": "Tập trung vào sản phẩm của bạn. Gauas lo phần thiết kế, xây dựng và cải tiến.",
     "all": "Xem tất cả",
     "items": [
-      ["Website", "Website giới thiệu và trang sản phẩm"],
-      ["Landing Page", "Trang chiến dịch rõ ràng, hiệu quả"],
-      ["Cổng khách hàng", "Một nơi để theo dõi và gửi yêu cầu"],
-      ["Hệ thống vận hành", "Công việc và dữ liệu rõ ràng hơn"],
-      ["Nền tảng trực tuyến", "Sản phẩm số sẵn sàng mở rộng"],
-      ["Đồng hành", "Hỗ trợ và cải tiến sau ra mắt"]
+      ["Website", "Không gian trực tuyến rõ ràng, phù hợp với doanh nghiệp của bạn."],
+      ["Ứng dụng di động", "Trải nghiệm gọn nhẹ, tập trung cho khách hàng của bạn."],
+      ["Tích hợp AI", "Đưa AI hữu ích vào quy trình cho khách hàng và đội ngũ."],
+      ["Công cụ", "Công cụ nội bộ giúp công việc hằng ngày đơn giản hơn."],
+      ["Hỗ trợ 24/7", "Sẵn sàng hỗ trợ khi sản phẩm của bạn cần được xử lý."]
     ]
   },
   "stats": {
     "eyebrow": "KẾT QUẢ TIN CẬY",
     "title": "Những con số biết nói",
     "items": [
-      ["20+", "Sản phẩm đã thực hiện"],
-      ["10.000 CCU", "Mục tiêu tải đồng thời"],
-      ["99.9%", "Định hướng ổn định vận hành"]
+      {"value": 20, "suffix": "+", "label": "Sản phẩm đã thực hiện"},
+      {"value": 10000, "suffix": " CCU", "label": "Thiết kế để mở rộng đến 10.000 người dùng đồng thời"},
+      {"value": 99.9, "suffix": "%", "label": "Mục tiêu ổn định vận hành"}
     ]
   },
   "growth": {
@@ -49,6 +48,7 @@
   "footer": {
     "descriptor": "Modern Application Builder",
     "rights": "© GAUAS. All rights reserved.",
-    "mantra": "Build  ·  Learn  ·  Share  ·  Grow"
+    "mantra": "Build  ·  Learn  ·  Share  ·  Grow",
+    "legal": ["Quyền riêng tư", "Điều khoản", "Cookie"]
   }
 }
