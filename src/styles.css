@@ -535,7 +535,12 @@ html[data-locale="ja"] .services-intro h2 { font-size: 26px; }
     color: #fff;
   }
 
-  .header.open:not(.solid) .menu-button { background: var(--ice); color: var(--ink); }
+  .header.scrolled:not(.solid) .menu-button,
+  .header.open:not(.solid) .menu-button {
+    border: 1px solid var(--line);
+    background: var(--ice);
+    color: var(--ink);
+  }
 
   .mobile-nav {
     position: fixed;
