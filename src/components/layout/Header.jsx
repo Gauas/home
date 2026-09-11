@@ -32,7 +32,11 @@ export function Header({ translations, solid = false }) {
     let animationFrame;
     const updateHeader = () => {
       cancelAnimationFrame(animationFrame);
-      animationFrame = requestAnimationFrame(() => setIsScrolled(scrollY > 24));
+      animationFrame = requestAnimationFrame(() => {
+        const heroHeight = document.querySelector(".hero")?.offsetHeight ?? 0;
+        const headerHeight = document.querySelector(".header")?.offsetHeight ?? 0;
+        setIsScrolled(scrollY + headerHeight >= heroHeight);
+      });
     };
 
     updateHeader();
@@ -75,7 +79,7 @@ export function Header({ translations, solid = false }) {
   return (
     <header className={className}>
       <div className="header-inner">
-        <BrandButton label={translations.nav[0]} onClick={() => navigateToSection("top")} />
+        <BrandButton label={translations.nav[0]} onClick={() => navigateToSection("top")} light={!solid && (isScrolled || isOpen)} />
         <nav className="desktop-nav" aria-label="Primary navigation">
           {translations.nav.map((label, index) => {
             if (index !== serviceIndex) {

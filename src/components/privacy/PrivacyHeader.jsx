@@ -12,7 +12,7 @@ export function LegalHeader() {
 
   return <header className={`privacy-header ${isOpen ? "open" : ""}`}>
     <div className="privacy-header-inner">
-      <button className="privacy-brand" type="button" onClick={goHome} aria-label="GAUAS home"><img src="/assets/full_logo.png" alt="GAUAS" /></button>
+      <button className="privacy-brand" type="button" onClick={goHome} aria-label="GAUAS home"><img src="/assets/full_logo_light.png" alt="GAUAS" /></button>
       <nav className="privacy-desktop-nav" aria-label="Primary navigation">{navigationItems.map((item) => <button type="button" onClick={goHome} key={item}>{item}</button>)}</nav>
       <div className="privacy-header-actions"><button type="button" aria-label="Search"><Search size={17} strokeWidth={1.6} /></button><a className="privacy-contact" href={`mailto:${CONTACT_EMAIL}`}>Contact</a><button className="privacy-console" type="button" onClick={goHome}>Console <span aria-hidden="true">→</span></button></div>
       <button className="privacy-menu-button" type="button" onClick={() => setIsOpen((current) => !current)} aria-label="Toggle navigation" aria-expanded={isOpen}>{isOpen ? <X /> : <Menu />}</button>

@@ -1,3 +1,5 @@
-export function GauasLogo({ className = "" }) {
-  return <img className={`gauas-logo ${className}`} src="/assets/full_logo.png" alt="" aria-hidden="true" />;
+export function GauasLogo({ className = "", light = false }) {
+  const source = light ? "/assets/full_logo_light.png" : "/assets/full_logo.png";
+
+  return <img className={`gauas-logo ${className}`} src={source} alt="" aria-hidden="true" />;
 }

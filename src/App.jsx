@@ -6,6 +6,8 @@ import { AiIntegrationPage } from "./components/ai/AiIntegrationPage";
 import { GrowthSection } from "./components/home/GrowthSection";
 import { HeroSection } from "./components/home/HeroSection";
 import { ServicesSection } from "./components/home/ServicesSection";
+import { WhyGauasSection } from "./components/home/WhyGauasSection";
+import { StatsSection } from "./components/home/StatsSection";
 import { Footer } from "./components/layout/Footer";
 import { Header } from "./components/layout/Header";
 import { LegalPage } from "./components/privacy/LegalPage";
@@ -80,10 +82,9 @@ function HomePage({ translations }) {
       <Header translations={translations} />
       <main id="main">
         <HeroSection translations={translations.hero} />
-        <ServicesSection
-          translations={translations.services}
-          statistics={translations.stats}
-        />
+        <ServicesSection translations={translations.services} />
+        <WhyGauasSection />
+        <StatsSection statistics={translations.stats} />
         <GrowthSection translations={translations.growth} />
         <ContactSection translations={translations.cta} />
       </main>

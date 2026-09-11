@@ -1,15 +1,7 @@
 import { ActionLink } from "../common/ActionLink";
-import { CountUpValue } from "../common/CountUpValue";
+import { InteractiveServiceCard } from "./InteractiveServiceCard";
 
-const SERVICE_ASSETS = [
-  "/assets/emoji/website.svg",
-  "/assets/emoji/mobile.svg",
-  "/assets/emoji/ai.svg",
-  "/assets/emoji/tool.svg",
-  "/assets/emoji/support.svg",
-];
-
-export function ServicesSection({ translations, statistics }) {
+export function ServicesSection({ translations }) {
   return (
     <section className="services" id="solutions">
       <div className="container">
@@ -22,35 +14,7 @@ export function ServicesSection({ translations, statistics }) {
           <ActionLink to="contact">{translations.all}</ActionLink>
         </div>
         <div className="service-row" id="industries">
-          {translations.items.map(([title, copy], index) => {
-            return (
-              <article key={title}>
-                <span className="service-icon-tile" aria-hidden="true">
-                  <img
-                    className="service-icon"
-                    src={SERVICE_ASSETS[index]}
-                    alt=""
-                    width="36"
-                    height="36"
-                  />
-                </span>
-                <h3>{title}</h3>
-                <p>{copy}</p>
-              </article>
-            );
-          })}
-        </div>
-        <div className="stats" id="about">
-          <div className="stats-label">
-            <p className="eyebrow dark">{statistics.eyebrow}</p>
-            <h2>{statistics.title}</h2>
-          </div>
-          {statistics.items.map(({ value, suffix, label }) => (
-            <div key={label}>
-              <CountUpValue value={value} suffix={suffix} />
-              <span>{label}</span>
-            </div>
-          ))}
+          {translations.items.map(([title, copy], index) => <InteractiveServiceCard title={title} copy={copy} index={index} key={title} />)}
         </div>
       </div>
     </section>
