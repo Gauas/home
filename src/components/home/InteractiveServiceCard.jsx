@@ -1,6 +1,7 @@
 import { useRef } from "react";
+import { Link } from "react-router-dom";
 
-export function InteractiveServiceCard({ title, copy, index }) {
+export function InteractiveServiceCard({ title, copy, href, index }) {
   const cardRef = useRef(null);
 
   const updatePointer = (event) => {
@@ -26,9 +27,16 @@ export function InteractiveServiceCard({ title, copy, index }) {
   };
 
   return (
-    <article className={`service-card service-card-${index}`} ref={cardRef} onPointerMove={updatePointer} onPointerLeave={resetPointer}>
+    <Link
+      className={`service-card service-card-${index}`}
+      ref={cardRef}
+      to={href}
+      onPointerMove={updatePointer}
+      onPointerLeave={resetPointer}
+      aria-label={`Learn more about ${title}`}
+    >
       <h3>{title}</h3>
       <p>{copy}</p>
-    </article>
+    </Link>
   );
 }

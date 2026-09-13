@@ -1,9 +1,6 @@
-import { CONTACT_EMAIL } from "../../config/site";
 import { ActionLink } from "../common/ActionLink";
 
 export function ContactSection({ translations }) {
-  const emailSubject = encodeURIComponent(translations.action);
-
   return (
     <section className="cta" id="contact">
       <div className="container">
@@ -13,10 +10,7 @@ export function ContactSection({ translations }) {
         </div>
         <div>
           <p>{translations.copy}</p>
-          <ActionLink
-            className="lime-button"
-            href={`mailto:${CONTACT_EMAIL}?subject=${emailSubject}`}
-          >
+          <ActionLink className="lime-button" to="contact">
             {translations.action}
           </ActionLink>
         </div>

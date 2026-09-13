@@ -9,3 +9,11 @@ export const HERO_VIDEO_SOURCES = {
 export const AI_HERO_VIDEO = `${RESOURCE_ORIGIN}/ai_hero.mp4`;
 
 export const NAVIGATION_TARGETS = ["top", "solutions", "about", "projects"];
+
+export const SERVICE_ROUTES = [
+  "/website",
+  "/mobile-application",
+  "/ai-integration",
+  "/tools",
+  "/support",
+];

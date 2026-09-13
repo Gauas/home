@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { NAVIGATION_TARGETS } from "../../config/site";
-import { scrollToSection } from "../../utils/scrollToSection";
+import { useNavigate } from "react-router-dom";
+import { NAVIGATION_TARGETS, SERVICE_ROUTES } from "../../config/site";
+import { useSectionNavigation } from "../../hooks/useSectionNavigation";
 import { BrandButton } from "../common/BrandButton";
+import { useContactModal } from "../contact/ContactModal";
 
 export function Header({ translations, solid = false }) {
   const routeNavigate = useNavigate();
-  const { pathname } = useLocation();
+  const navigateToSection = useSectionNavigation();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isServicesOpen, setIsServicesOpen] = useState(false);
+  const { openContactModal } = useContactModal();
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -47,12 +49,8 @@ export function Header({ translations, solid = false }) {
     };
   }, []);
 
-  const navigateToSection = (sectionId) => {
-    if (pathname !== "/") {
-      routeNavigate("/", { state: { scrollTarget: sectionId } });
-    } else {
-      scrollToSection(sectionId);
-    }
+  const goToSection = (sectionId) => {
+    navigateToSection(sectionId);
     setIsOpen(false);
     setIsServicesOpen(false);
   };
@@ -60,13 +58,9 @@ export function Header({ translations, solid = false }) {
   const serviceItems = translations.services.items.slice(0, 4);
   const serviceIndex = translations.nav.length - 1;
   const openService = (index) => {
-    if (index === 2) {
-      routeNavigate("/ai-integration");
-      setIsOpen(false);
-      setIsServicesOpen(false);
-      return;
-    }
-    navigateToSection("solutions");
+    routeNavigate(SERVICE_ROUTES[index]);
+    setIsOpen(false);
+    setIsServicesOpen(false);
   };
 
   const className = [
@@ -79,11 +73,11 @@ export function Header({ translations, solid = false }) {
   return (
     <header className={className}>
       <div className="header-inner">
-        <BrandButton label={translations.nav[0]} onClick={() => navigateToSection("top")} light={!solid && (isScrolled || isOpen)} />
+        <BrandButton label={translations.nav[0]} onClick={() => goToSection("top")} light={!solid && (isScrolled || isOpen)} />
         <nav className="desktop-nav" aria-label="Primary navigation">
           {translations.nav.map((label, index) => {
             if (index !== serviceIndex) {
-              return <button type="button" onClick={() => navigateToSection(NAVIGATION_TARGETS[index])} key={NAVIGATION_TARGETS[index]}>{label}</button>;
+              return <button type="button" onClick={() => goToSection(NAVIGATION_TARGETS[index])} key={NAVIGATION_TARGETS[index]}>{label}</button>;
             }
 
             return (
@@ -102,11 +96,11 @@ export function Header({ translations, solid = false }) {
           <button
             className="header-contact"
             type="button"
-            onClick={() => navigateToSection("contact")}
+            onClick={openContactModal}
           >
             {translations.contact}
           </button>
-          <button className="lime-button" type="button" onClick={() => navigateToSection("contact")}>{translations.consult}</button>
+          <button className="lime-button" type="button" onClick={openContactModal}>{translations.consult}</button>
         </div>
         <button
           className="menu-button"
@@ -122,7 +116,7 @@ export function Header({ translations, solid = false }) {
       <nav className="mobile-nav" id="mobile-nav">
         {translations.nav.map((label, index) => {
           if (index !== serviceIndex) {
-            return <button type="button" key={NAVIGATION_TARGETS[index]} onClick={() => navigateToSection(NAVIGATION_TARGETS[index])}>{label}</button>;
+            return <button type="button" key={NAVIGATION_TARGETS[index]} onClick={() => goToSection(NAVIGATION_TARGETS[index])}>{label}</button>;
           }
 
           return <div className={`mobile-service-menu ${isServicesOpen ? "visible" : ""}`} key={NAVIGATION_TARGETS[index]}>
@@ -130,13 +124,13 @@ export function Header({ translations, solid = false }) {
             <div className="mobile-service-panel">{serviceItems.map(([title], itemIndex) => <button type="button" onClick={() => openService(itemIndex)} key={title}>{title}</button>)}</div>
           </div>;
         })}
-        <button type="button" onClick={() => navigateToSection("contact")}>
+        <button type="button" onClick={openContactModal}>
           {translations.contact}
         </button>
         <button
           className="lime-button"
           type="button"
-          onClick={() => navigateToSection("contact")}
+          onClick={openContactModal}
         >
           {translations.consult}
         </button>

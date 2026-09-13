@@ -2,6 +2,27 @@
   "nav": ["Home", "Product", "About", "Service"],
   "contact": "Contact",
   "consult": "Get advice",
+  "contactForm": {
+    "eyebrow": "CONTACT US",
+    "title": "Let's build\ntogether.",
+    "copy": "Tell us about your project and we'll get back to you.",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "email": "Work email",
+    "emailPlaceholder": "you@company.com",
+    "company": "Company",
+    "companyPlaceholder": "Your company",
+    "phone": "Phone",
+    "phonePlaceholder": "+84 912 345 678",
+    "optional": "optional",
+    "message": "How can we help?",
+    "messagePlaceholder": "Tell us what you're building, what you need, or any questions you have.",
+    "submit": "Send message",
+    "subject": "New project inquiry",
+    "privacy": "By submitting this form, you agree to our",
+    "privacyLink": "Privacy Policy",
+    "close": "Close contact form"
+  },
   "skip": "Skip to content",
   "hero": {
     "eyebrow": "SIMPLE  ·  SCALABLE  ·  YOURS",
@@ -25,11 +46,11 @@
   },
   "stats": {
     "eyebrow": "TRUSTED RESULTS",
-    "title": "Numbers that speak",
+    "title": "Built for real growth",
     "items": [
       {"value": 20, "suffix": "+", "label": "Products delivered"},
-      {"value": 10000, "suffix": " CCU", "label": "Designed to scale to 10k concurrent users"},
-      {"value": 99.9, "suffix": "%", "label": "Operational stability target"}
+      {"value": 1000, "suffix": " CCU", "label": "Built to support 1,000 concurrent users"},
+      {"value": 99.9, "suffix": "%", "label": "Platform reliability target"}
     ]
   },
   "growth": {

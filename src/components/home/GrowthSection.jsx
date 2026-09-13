@@ -4,7 +4,7 @@ export function GrowthSection({ translations }) {
   return (
     <section className="growth" id="projects">
       <div className="growth-image">
-        <img src="/assets/growth-panels.webp" alt={translations.alt} />
+        <img src="/assets/gauas-growth-panels.webp" alt={translations.alt} />
       </div>
       <div className="growth-copy reveal">
         <p className="eyebrow dark">{translations.eyebrow}</p>

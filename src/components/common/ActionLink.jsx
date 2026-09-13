@@ -1,6 +1,9 @@
-import { scrollToSection } from "../../utils/scrollToSection";
+import { useSectionNavigation } from "../../hooks/useSectionNavigation";
+import { useContactModal } from "../contact/ContactModal";
 
 export function ActionLink({ children, to, href, className = "" }) {
+  const { openContactModal } = useContactModal();
+  const navigateToSection = useSectionNavigation();
   if (href) {
     return (
       <a className={className} href={href}>
@@ -13,7 +16,7 @@ export function ActionLink({ children, to, href, className = "" }) {
     <button
       className={className}
       type="button"
-      onClick={() => scrollToSection(to)}
+      onClick={to === "contact" ? openContactModal : () => navigateToSection(to)}
     >
       {children}
     </button>

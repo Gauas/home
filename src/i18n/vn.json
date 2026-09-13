@@ -2,6 +2,27 @@
   "nav": ["Trang chủ", "Sản phẩm", "Giới thiệu", "Dịch vụ"],
   "contact": "Liên hệ",
   "consult": "Nhận tư vấn",
+  "contactForm": {
+    "eyebrow": "LIÊN HỆ",
+    "title": "Cùng xây dựng\nđiều tuyệt vời.",
+    "copy": "Hãy cho chúng tôi biết về dự án của bạn, chúng tôi sẽ phản hồi sớm.",
+    "name": "Họ và tên",
+    "namePlaceholder": "Tên của bạn",
+    "email": "Email công việc",
+    "emailPlaceholder": "ban@congty.com",
+    "company": "Công ty",
+    "companyPlaceholder": "Tên công ty",
+    "phone": "Số điện thoại",
+    "phonePlaceholder": "+84 912 345 678",
+    "optional": "không bắt buộc",
+    "message": "Chúng tôi có thể giúp gì?",
+    "messagePlaceholder": "Hãy chia sẻ sản phẩm bạn đang xây dựng, nhu cầu hoặc câu hỏi của bạn.",
+    "submit": "Gửi tin nhắn",
+    "subject": "Yêu cầu dự án mới",
+    "privacy": "Khi gửi biểu mẫu này, bạn đồng ý với",
+    "privacyLink": "Chính sách bảo mật",
+    "close": "Đóng biểu mẫu liên hệ"
+  },
   "skip": "Bỏ qua điều hướng",
   "hero": {
     "eyebrow": "ĐƠN GIẢN  ·  CÓ THỂ MỞ RỘNG  ·  CỦA BẠN",
@@ -25,11 +46,11 @@
   },
   "stats": {
     "eyebrow": "KẾT QUẢ TIN CẬY",
-    "title": "Những con số biết nói",
+    "title": "Sẵn sàng cho tăng trưởng thực tế",
     "items": [
       {"value": 20, "suffix": "+", "label": "Sản phẩm đã thực hiện"},
-      {"value": 10000, "suffix": " CCU", "label": "Thiết kế để mở rộng đến 10.000 người dùng đồng thời"},
-      {"value": 99.9, "suffix": "%", "label": "Mục tiêu ổn định vận hành"}
+      {"value": 1000, "suffix": " CCU", "label": "Thiết kế để hỗ trợ 1.000 người dùng đồng thời"},
+      {"value": 99.9, "suffix": "%", "label": "Mục tiêu độ tin cậy của nền tảng"}
     ]
   },
   "growth": {

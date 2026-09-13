@@ -1,5 +1,6 @@
 import { ActionLink } from "../common/ActionLink";
 import { InteractiveServiceCard } from "./InteractiveServiceCard";
+import { SERVICE_ROUTES } from "../../config/site";
 
 export function ServicesSection({ translations }) {
   return (
@@ -14,7 +15,15 @@ export function ServicesSection({ translations }) {
           <ActionLink to="contact">{translations.all}</ActionLink>
         </div>
         <div className="service-row" id="industries">
-          {translations.items.map(([title, copy], index) => <InteractiveServiceCard title={title} copy={copy} index={index} key={title} />)}
+          {translations.items.map(([title, copy], index) => (
+            <InteractiveServiceCard
+              title={title}
+              copy={copy}
+              href={SERVICE_ROUTES[index]}
+              index={index}
+              key={title}
+            />
+          ))}
         </div>
       </div>
     </section>

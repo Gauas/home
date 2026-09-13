@@ -26,7 +26,7 @@ export function HeroSection({ translations }) {
           loop
           playsInline
           preload="metadata"
-          poster="/assets/new-hero-poster.webp"
+          poster="/assets/gauas-hero-poster.webp"
           aria-hidden="true"
         >
           <source src={HERO_VIDEO_SOURCES.webm} type="video/webm" />

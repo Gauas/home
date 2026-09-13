@@ -2,6 +2,27 @@
   "nav": ["ホーム", "プロダクト", "私たちについて", "サービス"],
   "contact": "お問い合わせ",
   "consult": "相談する",
+  "contactForm": {
+    "eyebrow": "お問い合わせ",
+    "title": "一緒につくり\nましょう。",
+    "copy": "プロジェクトについてお聞かせください。折り返しご連絡します。",
+    "name": "お名前",
+    "namePlaceholder": "お名前を入力",
+    "email": "仕事用メールアドレス",
+    "emailPlaceholder": "you@company.com",
+    "company": "会社名",
+    "companyPlaceholder": "会社名を入力",
+    "phone": "電話番号",
+    "phonePlaceholder": "+84 912 345 678",
+    "optional": "任意",
+    "message": "ご相談内容",
+    "messagePlaceholder": "作りたいもの、必要なこと、ご質問をお聞かせください。",
+    "submit": "メッセージを送る",
+    "subject": "新規プロジェクトのご相談",
+    "privacy": "このフォームを送信すると、",
+    "privacyLink": "プライバシーポリシー",
+    "close": "お問い合わせフォームを閉じる"
+  },
   "skip": "本文へ移動",
   "hero": {
     "eyebrow": "シンプル  ·  拡張可能  ·  あなたのために",
@@ -25,11 +46,11 @@
   },
   "stats": {
     "eyebrow": "信頼できる実績",
-    "title": "数字で見るGauas",
+    "title": "実際の成長に備える",
     "items": [
       {"value": 20, "suffix": "+", "label": "制作したプロダクト"},
-      {"value": 10000, "suffix": " CCU", "label": "同時接続10,000人まで拡張できる設計"},
-      {"value": 99.9, "suffix": "%", "label": "安定運用の目標"}
+      {"value": 1000, "suffix": " CCU", "label": "最大1,000人の同時接続を想定した設計"},
+      {"value": 99.9, "suffix": "%", "label": "プラットフォームの信頼性目標"}
     ]
   },
   "growth": {

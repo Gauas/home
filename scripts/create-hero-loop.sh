@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-INPUT="${1:-$PROJECT_ROOT/public/assets/new_hero.mp4}"
+INPUT="${1:-$PROJECT_ROOT/public/assets/gauas-hero-source.mp4}"
 OUTPUT_DIR="$PROJECT_ROOT/public/video"
 MP4_OUTPUT="$OUTPUT_DIR/gauas-hero-loop.mp4"
 WEBM_OUTPUT="$OUTPUT_DIR/gauas-hero-loop.webm"

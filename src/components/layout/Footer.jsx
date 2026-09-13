@@ -5,10 +5,11 @@ import {
   NAVIGATION_TARGETS,
 } from "../../config/site";
 import { useNavigate } from "react-router-dom";
-import { scrollToSection } from "../../utils/scrollToSection";
+import { useSectionNavigation } from "../../hooks/useSectionNavigation";
 
 export function Footer({ translations, navigation }) {
   const navigate = useNavigate();
+  const navigateToSection = useSectionNavigation();
   const legalRoutes = ["/privacy", "/terms", "/cookies"];
 
   return (
@@ -22,7 +23,7 @@ export function Footer({ translations, navigation }) {
             {navigation.map((label, index) => (
               <button
                 type="button"
-                onClick={() => scrollToSection(NAVIGATION_TARGETS[index])}
+                onClick={() => navigateToSection(NAVIGATION_TARGETS[index])}
                 key={NAVIGATION_TARGETS[index]}
               >
                 {label}
@@ -43,7 +44,7 @@ export function Footer({ translations, navigation }) {
             </nav>
           </div>
         </div>
-        <img className="footer-wordmark" src="/assets/footer_logo.png" alt="GAUAS" />
+        <img className="footer-wordmark" src="/assets/gauas-footer-wordmark.png" alt="GAUAS" />
       </div>
     </footer>
   );
