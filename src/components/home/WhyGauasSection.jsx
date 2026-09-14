@@ -1,9 +1,9 @@
 import { ActionLink } from "../common/ActionLink";
 
 const reasons = [
-  ["01", "Cost-efficient development", "High-quality products with optimized development costs for your budget."],
-  ["02", "Quality-driven design", "Clean, thoughtful interfaces built with usability, consistency, and detail in mind."],
-  ["03", "Fast delivery", "A focused process that moves quickly from idea to production."],
+  ["01", "Product and engineering together", "Experience, architecture, and delivery decisions support the same goal."],
+  ["02", "Focused scope", "Build what the product needs now while preserving a clear path for change."],
+  ["03", "Production ownership", "Deployment, reliability, and ongoing improvement are part of the product work."],
 ];
 
 export function WhyGauasSection() {
@@ -12,9 +12,9 @@ export function WhyGauasSection() {
       <div className="container why-gauas-grid">
         <div className="why-gauas-copy">
           <p className="why-gauas-eyebrow">WHY GAUAS</p>
-          <h2>Build faster.<br />Spend smarter.<br /><em>Ship better.</em></h2>
-          <p>Gauas helps you move from idea to production with optimized development costs, thoughtful design, and a focused delivery process.</p>
-          <ActionLink className="lime-button" to="contact">Let&apos;s build together →</ActionLink>
+          <h2>Built clearly.<br />Run reliably.<br /><em>Ready to change.</em></h2>
+          <p>GAUAS treats design, software, infrastructure, and production as one connected product problem.</p>
+          <ActionLink className="lime-button" to="contact">Start a project →</ActionLink>
         </div>
         <div className="why-gauas-reasons">
           {reasons.map(([number, title, copy], index) => (

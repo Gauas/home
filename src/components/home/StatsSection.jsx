@@ -1,20 +1,12 @@
-import { CountUpValue } from "../common/CountUpValue";
-
-export function StatsSection({ statistics }) {
+export function StatsSection() {
   return (
-    <section className="stats-section" id="about">
+    <section className="stats-section">
       <div className="container">
         <div className="stats">
-          <div className="stats-label">
-            <p className="eyebrow dark">{statistics.eyebrow}</p>
-            <h2>{statistics.title}</h2>
-          </div>
-          {statistics.items.map(({ value, suffix, label }) => (
-            <div key={label}>
-              <CountUpValue value={value} suffix={suffix} />
-              <span>{label}</span>
-            </div>
-          ))}
+          <div className="stats-label"><p className="eyebrow dark">BUILT FOR REAL USE</p><h2>Ready for production.</h2></div>
+          <div><strong>Clear scope</strong><span>Focused on what the product needs.</span></div>
+          <div><strong>Reliable systems</strong><span>Designed for operation and change.</span></div>
+          <div><strong>Long-term quality</strong><span>Built to stay understandable.</span></div>
         </div>
       </div>
     </section>

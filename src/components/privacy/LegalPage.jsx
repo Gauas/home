@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CONTACT_EMAIL } from "../../config/site";
 import { LegalSection } from "./LegalSection";
-import { LegalFooter } from "./PrivacyFooter";
-import { LegalHeader } from "./PrivacyHeader";
+import { Header } from "../layout/Header";
+import { Footer } from "../layout/Footer";
 import { getSectionId, legalPolicies } from "./legalPolicies";
 
 export function LegalPage({ policyKey }) {
@@ -29,7 +29,7 @@ export function LegalPage({ policyKey }) {
   const scrollTo = (sectionId) => document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
 
   return <div className="privacy-page">
-    <LegalHeader />
+    <Header solid />
     <main id="main" className="privacy-main">
       <section className="privacy-intro container">
         <div><p className="privacy-eyebrow">LEGAL</p><h1>{policy.title}</h1><p>{policy.description}</p><time dateTime="2026-09">Last updated: September 2026</time></div>
@@ -50,7 +50,7 @@ export function LegalPage({ policyKey }) {
         </article>
       </section>
     </main>
-    <section className="privacy-cta"><div className="container"><div><p className="privacy-eyebrow">LET’S BUILD</p><h2>Turn your ideas into real products.</h2></div><div><p>From infrastructure to application, we help you move faster.</p><a href={`mailto:${CONTACT_EMAIL}`} className="lime-button">Get in touch <span aria-hidden="true">→</span></a></div></div></section>
-    <LegalFooter />
+    <section className="privacy-cta"><div className="container"><div><p className="privacy-eyebrow">START A PROJECT</p><h2>Turn your idea into a real product.</h2></div><div><p>Tell us what you are building and what needs to happen next.</p><a href={`mailto:${CONTACT_EMAIL}`} className="lime-button">Start a project <span aria-hidden="true">→</span></a></div></div></section>
+    <Footer />
   </div>;
 }

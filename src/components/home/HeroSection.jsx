@@ -40,10 +40,10 @@ export function HeroSection({ translations }) {
           <h1>{translations.title}</h1>
           <p>{translations.copy}</p>
           <div className="hero-actions">
-            <ActionLink className="lime-button" to="solutions">
+            <ActionLink className="lime-button" to="contact">
               {translations.primary}
             </ActionLink>
-            <ActionLink className="outline-button" to="projects">
+            <ActionLink className="outline-button" to="/work">
               {translations.secondary}
             </ActionLink>
           </div>

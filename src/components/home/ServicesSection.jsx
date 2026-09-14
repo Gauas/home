@@ -1,30 +1,13 @@
-import { ActionLink } from "../common/ActionLink";
+import { Link } from "react-router-dom";
+import { SERVICES } from "../../config/site";
 import { InteractiveServiceCard } from "./InteractiveServiceCard";
-import { SERVICE_ROUTES } from "../../config/site";
 
-export function ServicesSection({ translations }) {
+export function ServicesSection() {
   return (
-    <section className="services" id="solutions">
+    <section className="services" id="services">
       <div className="container">
-        <div className="services-intro reveal">
-          <div>
-            <p className="eyebrow dark">{translations.eyebrow}</p>
-            <h2>{translations.title}</h2>
-          </div>
-          <p>{translations.copy}</p>
-          <ActionLink to="contact">{translations.all}</ActionLink>
-        </div>
-        <div className="service-row" id="industries">
-          {translations.items.map(([title, copy], index) => (
-            <InteractiveServiceCard
-              title={title}
-              copy={copy}
-              href={SERVICE_ROUTES[index]}
-              index={index}
-              key={title}
-            />
-          ))}
-        </div>
+        <div className="services-intro reveal"><div><p className="eyebrow dark">WHAT GAUAS CAN DO</p><h2>Everything you need to start and grow.</h2></div><p>Focus on your product. GAUAS takes care of design, delivery, and improvement.</p><Link className="services-view-all" to="/about">View all</Link></div>
+        <div className="service-row">{SERVICES.map((service, index) => <InteractiveServiceCard title={service.label} copy={service.description} href={service.href} index={index} key={service.href} />)}</div>
       </div>
     </section>
   );

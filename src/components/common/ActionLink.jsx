@@ -1,5 +1,6 @@
 import { useSectionNavigation } from "../../hooks/useSectionNavigation";
 import { useContactModal } from "../contact/ContactModal";
+import { Link } from "react-router-dom";
 
 export function ActionLink({ children, to, href, className = "" }) {
   const { openContactModal } = useContactModal();
@@ -11,6 +12,8 @@ export function ActionLink({ children, to, href, className = "" }) {
       </a>
     );
   }
+
+  if (to?.startsWith("/")) return <Link className={className} to={to}>{children}</Link>;
 
   return (
     <button
