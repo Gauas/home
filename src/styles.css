@@ -470,19 +470,22 @@ img, video, svg { display: block; max-width: 100%; }
 /* Growth */
 .growth {
   display: grid;
-  height: 300px;
   grid-template-columns: 47.3% 52.7%;
-  background: #f2f6f7;
+  background: linear-gradient(135deg, #082c45, #0d3b50);
 }
 
-.growth-image { overflow: hidden; }
-.growth-image img { width: 100%; height: 100%; object-fit: cover; object-position: 49% center; }
+.growth-image { position: relative; aspect-ratio: 16 / 9; overflow: hidden; }
+.growth-image img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.growth-image::after { position: absolute; inset: 0; background: linear-gradient(to right, transparent 62%, #082c45); content: ""; pointer-events: none; }
 
 .growth-copy {
   align-self: center;
   max-width: 540px;
   padding: 28px 60px;
+  color: #fff;
 }
+
+.growth-copy .eyebrow.dark { color: var(--lime); }
 
 .growth-copy h2 {
   max-width: 430px;
@@ -497,16 +500,17 @@ img, video, svg { display: block; max-width: 100%; }
 .growth-copy > p:nth-of-type(2) {
   max-width: 440px;
   margin-top: 13px;
-  color: var(--body);
+  color: #b9cbd4;
   font-size: var(--type-ui-sm);
   line-height: 1.5;
 }
 
-.growth-copy .dark-button { margin-top: 17px; }
+.growth-copy .dark-button { margin-top: 17px; background: var(--lime); color: var(--navy); }
 
 /* Contact */
 .cta {
   height: 150px;
+  margin-top: 32px;
   background: radial-gradient(circle at 78% 45%, #0d3549, #071723 55%);
   color: #fff;
 }
@@ -793,7 +797,7 @@ html[data-locale="ja"] .services-intro h2 { font-size: 30px; }
   .growth-copy > p:nth-of-type(2) { font-size: 14px; }
   .growth-copy .dark-button { height: 44px; min-height: 44px; }
 
-  .cta { height: auto; min-height: 180px; padding: 34px 0; }
+  .cta { height: auto; min-height: 180px; margin-top: 24px; padding: 34px 0; }
   .cta .container { grid-template-columns: 1.3fr .7fr; gap: 36px; }
   .cta .lime-button { height: 44px; min-height: 44px; }
 
@@ -851,12 +855,13 @@ html[data-locale="ja"] .services-intro h2 { font-size: 30px; }
 
   .growth { display: flex; height: auto; flex-direction: column; }
   .growth-image { height: 250px; }
+  .growth-image::after { background: linear-gradient(to bottom, transparent 62%, #082c45); }
   .growth-copy { max-width: none; padding: 42px 16px 48px; }
   .growth-copy h2 { font-size: 32px; }
   .growth-copy > p:nth-of-type(2) { font-size: 14px; }
   .growth-copy .dark-button { width: 144px; }
 
-  .cta { padding: 44px 0; }
+  .cta { margin-top: 18px; padding: 44px 0; }
   .cta .container { display: block; }
   .cta h2 { font-size: 32px; line-height: 1.08; }
   .cta .container > div:last-child { margin-top: 22px; }
