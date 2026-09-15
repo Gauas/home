@@ -60,7 +60,6 @@ export function ContactModalProvider({ children, translations }) {
       `${translations.contactForm.name}: ${data.get("name")}`,
       `${translations.contactForm.email}: ${data.get("email")}`,
       `${translations.contactForm.company}: ${data.get("company") || "—"}`,
-      `Budget range: ${data.get("budget") || "—"}`,
       projectConfig ? `Project configuration: ${JSON.stringify(projectConfig)}` : "",
       "",
       data.get("message"),
@@ -93,7 +92,6 @@ export function ContactModalProvider({ children, translations }) {
                 <label htmlFor="contact-name"><span className="contact-modal-label">{translations.contactForm.name}<b aria-hidden="true">*</b></span><input id="contact-name" ref={nameInput} name="name" placeholder={translations.contactForm.namePlaceholder} required /></label>
                 <label htmlFor="contact-email"><span className="contact-modal-label">{translations.contactForm.email}<b aria-hidden="true">*</b></span><input id="contact-email" name="email" type="email" placeholder={translations.contactForm.emailPlaceholder} required /></label>
                 <label htmlFor="contact-company"><span className="contact-modal-label">{translations.contactForm.company} <em>({translations.contactForm.optional})</em></span><input id="contact-company" name="company" placeholder={translations.contactForm.companyPlaceholder} /></label>
-                <label htmlFor="contact-budget"><span className="contact-modal-label">Budget range <em>({translations.contactForm.optional})</em></span><select id="contact-budget" name="budget" defaultValue=""><option value="">Select a range</option><option>Under $5,000</option><option>$5,000–$15,000</option><option>$15,000–$50,000</option><option>$50,000+</option><option>Not sure yet</option></select></label>
               </div>
               <label className="contact-modal-message" htmlFor="contact-message"><span className="contact-modal-label">What are you building?<b aria-hidden="true">*</b></span><textarea id="contact-message" name="message" defaultValue={projectConfig ? "Web Development project configuration is included above. Add any useful context here." : ""} placeholder="The product, current stage, and what you need help with." required /></label>
               <button className="contact-modal-submit" type="submit">Continue in email<ArrowRight size={19} strokeWidth={2} aria-hidden="true" /></button>

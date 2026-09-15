@@ -9,7 +9,7 @@ export const AI_HERO_VIDEO = `${RESOURCE_ORIGIN}/ai_hero.mp4`;
 
 export const PRIMARY_NAVIGATION = [
   { label: "Home", href: "/" },
-  { label: "Work", href: "/work" },
+  { label: "Work", href: "/work", disabled: true },
   { label: "Services", href: "/#services", dropdown: true },
   { label: "About", href: "/about" },
 ];

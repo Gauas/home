@@ -9,7 +9,6 @@ import { StatsSection } from "./components/home/StatsSection";
 import { Footer } from "./components/layout/Footer";
 import { Header } from "./components/layout/Header";
 import { LegalPage } from "./components/privacy/LegalPage";
-import { SelectedWork } from "./components/common/SelectedWork";
 import { FinalCta } from "./components/common/FinalCta";
 import { WorkPage } from "./components/work/WorkPage";
 import { AboutPage } from "./components/about/AboutPage";
@@ -24,7 +23,7 @@ import { servicePages } from "./data/content";
 import { PAGE_METADATA } from "./config/metadata";
 
 function HomePage() {
-  return <><a className="skip" href="#main">Skip to content</a><Header /><main id="main"><HeroSection translations={en.hero} /><ServicesSection /><SelectedWork /><WhyGauasSection /><StatsSection /><FinalCta /></main><Footer /></>;
+  return <><a className="skip" href="#main">Skip to content</a><Header /><main id="main"><HeroSection translations={en.hero} /><ServicesSection /><WhyGauasSection /><StatsSection /><FinalCta /></main><Footer /></>;
 }
 
 export default function App() {

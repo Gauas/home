@@ -36,7 +36,9 @@ export function Header({ solid = false }) {
       <div className="header-inner">
         <Link className="brand" to="/" aria-label="GAUAS home"><GauasLogo light={!solid && (isScrolled || isOpen)} /></Link>
         <nav className="desktop-nav" aria-label="Primary navigation">
-          {PRIMARY_NAVIGATION.map((item) => item.dropdown ? (
+          {PRIMARY_NAVIGATION.map((item) => item.disabled ? (
+            <span className="nav-disabled" aria-disabled="true" key={item.label}>{item.label}</span>
+          ) : item.dropdown ? (
             <div className="service-dropdown" key={item.label} onMouseEnter={() => setIsServicesOpen(true)} onMouseLeave={() => setIsServicesOpen(false)} onFocus={() => setIsServicesOpen(true)} onBlur={(event) => !event.currentTarget.contains(event.relatedTarget) && setIsServicesOpen(false)}>
               <button className="service-trigger" type="button" aria-expanded={isServicesOpen} aria-controls="desktop-services" onClick={() => setIsServicesOpen((current) => !current)}>{item.label}<ChevronDown size={13} aria-hidden="true" /></button>
               <div className={`service-dropdown-panel ${isServicesOpen ? "visible" : ""}`} id="desktop-services">
@@ -45,18 +47,18 @@ export function Header({ solid = false }) {
             </div>
           ) : <NavLink to={item.href} key={item.href} end={item.href === "/"}>{item.label}</NavLink>)}
         </nav>
-        <div className="header-actions"><button className="header-contact" type="button" onClick={openContactModal}>Contact</button><button className="lime-button" type="button" onClick={openContactModal}>Start a project</button></div>
+        <div className="header-actions"><button className="header-contact" type="button" onClick={openContactModal}>Contact</button><button className="lime-button" type="button" onClick={openContactModal}>Explore</button></div>
         <button className="menu-button" type="button" aria-expanded={isOpen} aria-controls="mobile-nav" aria-label={isOpen ? "Close menu" : "Open menu"} onClick={() => setIsOpen((current) => !current)}>{isOpen ? <X /> : <Menu />}</button>
       </div>
       <nav className="mobile-nav" id="mobile-nav" aria-label="Mobile navigation">
         <Link to="/" onClick={closeMenu}>Home</Link>
-        <Link to="/work" onClick={closeMenu}>Work</Link>
+        <span className="nav-disabled" aria-disabled="true">Work</span>
         <div className={`mobile-service-menu ${isServicesOpen ? "visible" : ""}`}>
           <button className="mobile-service-trigger" type="button" aria-expanded={isServicesOpen} onClick={() => setIsServicesOpen((current) => !current)}>Services<ChevronDown size={15} aria-hidden="true" /></button>
           <div className="mobile-service-panel">{SERVICES.map((service) => <Link to={service.href} onClick={closeMenu} key={service.href}>{service.label}</Link>)}</div>
         </div>
         <Link to="/about" onClick={closeMenu}>About</Link>
-        <button className="lime-button" type="button" onClick={(event) => { closeMenu(); openContactModal(event); }}>Start a project</button>
+        <button className="lime-button" type="button" onClick={(event) => { closeMenu(); openContactModal(event); }}>Explore</button>
       </nav>
     </header>
   );
