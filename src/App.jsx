@@ -6,7 +6,6 @@ import { HeroSection } from "./components/home/HeroSection";
 import { ServicesSection } from "./components/home/ServicesSection";
 import { WhyGauasSection } from "./components/home/WhyGauasSection";
 import { StatsSection } from "./components/home/StatsSection";
-import { SectionLoop } from "./components/home/SectionLoop";
 import { Footer } from "./components/layout/Footer";
 import { Header } from "./components/layout/Header";
 import { LegalPage } from "./components/privacy/LegalPage";
@@ -24,7 +23,7 @@ import { servicePages } from "./data/content";
 import { PAGE_METADATA } from "./config/metadata";
 
 function HomePage() {
-  return <><a className="skip" href="#main">Skip to content</a><Header /><main id="main"><HeroSection translations={en.hero} /><SectionLoop><ServicesSection /><WhyGauasSection /><StatsSection /><FinalCta /></SectionLoop></main><Footer /></>;
+  return <><a className="skip" href="#main">Skip to content</a><Header /><main id="main"><HeroSection translations={en.hero} /><ServicesSection /><WhyGauasSection /><StatsSection /><FinalCta /></main><Footer /></>;
 }
 
 export default function App() {
