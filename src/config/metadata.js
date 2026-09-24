@@ -1,6 +1,6 @@
 export const PAGE_METADATA = {
   "/": { title: "GAUAS | Digital Product & Software Studio", description: "GAUAS designs and builds websites, applications, AI-powered products, and internal tools—from idea to production." },
-  "/work": { title: "Selected Work | GAUAS", description: "Selected digital products, systems, and experiences built by GAUAS." },
+  "/product": { title: "Products | GAUAS", description: "Explore digital products created and operated by GAUAS." },
   "/about": { title: "About GAUAS | Software Product Studio", description: "GAUAS is a software product studio in Da Nang, Vietnam, building web, mobile, backend, infrastructure, and AI-powered products." },
   "/website": { title: "Web Development Services | GAUAS", description: "Fast, responsive marketing websites and production web applications built around real business goals." },
   "/mobile-application": { title: "Mobile Application Development | GAUAS", description: "Focused iOS and Android products connected to real backend systems and business workflows." },

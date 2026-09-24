@@ -52,7 +52,7 @@ export function Header({ solid = false }) {
       </div>
       <nav className="mobile-nav" id="mobile-nav" aria-label="Mobile navigation">
         <Link to="/" onClick={closeMenu}>Home</Link>
-        <span className="nav-disabled" aria-disabled="true">Work</span>
+        <Link to="/product" onClick={closeMenu}>Product</Link>
         <div className={`mobile-service-menu ${isServicesOpen ? "visible" : ""}`}>
           <button className="mobile-service-trigger" type="button" aria-expanded={isServicesOpen} onClick={() => setIsServicesOpen((current) => !current)}>Services<ChevronDown size={15} aria-hidden="true" /></button>
           <div className="mobile-service-panel">{SERVICES.map((service) => <Link to={service.href} onClick={closeMenu} key={service.href}>{service.label}</Link>)}</div>

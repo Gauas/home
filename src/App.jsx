@@ -1,4 +1,4 @@
-import { Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { CookieConsent } from "./components/common/CookieConsent";
 import { AiIntegrationPage } from "./components/ai/AiIntegrationPage";
 import { ServicePage } from "./components/services/ServicePage";
@@ -10,7 +10,7 @@ import { Footer } from "./components/layout/Footer";
 import { Header } from "./components/layout/Header";
 import { LegalPage } from "./components/privacy/LegalPage";
 import { FinalCta } from "./components/common/FinalCta";
-import { WorkPage } from "./components/work/WorkPage";
+import { ProductPage } from "./components/product/ProductPage";
 import { AboutPage } from "./components/about/AboutPage";
 import { NotFoundPage } from "./components/common/NotFoundPage";
 import { SupportPage } from "./components/common/SupportPage";
@@ -36,7 +36,8 @@ export default function App() {
 
   return <><ContactModalProvider translations={en}><Routes>
     <Route path="/" element={<HomePage />} />
-    <Route path="/work" element={<WorkPage />} />
+    <Route path="/product" element={<ProductPage />} />
+    <Route path="/work" element={<Navigate to="/product" replace />} />
     <Route path="/about" element={<AboutPage />} />
     <Route path="/website" element={<ServicePage service={servicePages.website} />} />
     <Route path="/mobile-application" element={<ServicePage service={servicePages.mobile} />} />

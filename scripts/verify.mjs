@@ -51,7 +51,7 @@ try {
       }, { expected: PAGE_METADATA[route], route });
       results.push({ viewport: viewport.width, ...check, errors });
       if (route === "/" && [375, 768, 1440, 1920].includes(viewport.width)) await page.screenshot({ path: `/tmp/gauas-home-${viewport.width}.png`, fullPage: true });
-      if ([375, 1440].includes(viewport.width) && ["/website", "/ai-integration", "/work", "/about"].includes(route)) await page.screenshot({ path: `/tmp/gauas-${route.slice(1)}-${viewport.width}.png`, fullPage: true });
+      if ([375, 1440].includes(viewport.width) && ["/website", "/ai-integration", "/product", "/about"].includes(route)) await page.screenshot({ path: `/tmp/gauas-${route.slice(1)}-${viewport.width}.png`, fullPage: true });
       await page.close();
     }
   }

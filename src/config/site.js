@@ -9,7 +9,7 @@ export const AI_HERO_VIDEO = `${RESOURCE_ORIGIN}/ai_hero.mp4`;
 
 export const PRIMARY_NAVIGATION = [
   { label: "Home", href: "/" },
-  { label: "Work", href: "/work", disabled: true },
+  { label: "Product", href: "/product" },
   { label: "Services", href: "/#services", dropdown: true },
   { label: "About", href: "/about" },
 ];
@@ -23,7 +23,7 @@ export const SERVICES = [
 
 export const PUBLIC_ROUTES = [
   "/",
-  "/work",
+  "/product",
   "/about",
   ...SERVICES.map(({ href }) => href),
   "/support",

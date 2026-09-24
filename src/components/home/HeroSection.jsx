@@ -43,7 +43,7 @@ export function HeroSection({ translations }) {
             <ActionLink className="lime-button" to="contact">
               {translations.primary}
             </ActionLink>
-            <ActionLink className="outline-button" to="/work">
+            <ActionLink className="outline-button" to="/product">
               {translations.secondary}
             </ActionLink>
           </div>
